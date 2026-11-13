@@ -11,7 +11,7 @@ Recibes el identificador de una historia (por ejemplo, C0-04).
 ## Qué haces
 
 1. Lee `CLAUDE.md`, la historia en `docs/backlog/` y las secciones de `docs/reglamento.md` que cita.
-2. Mira el cambio con `git diff main...HEAD` y la lista de archivos tocados.
+2. Mira el cambio con `git diff master...HEAD` y la lista de archivos tocados.
 3. Ejecuta todas las pruebas.
 4. Comprueba cada criterio de aceptación: ¿hay una prueba que lo verifica de verdad? ¿El código hace lo que dice el criterio y lo que dice el reglamento?
 5. Comprueba además:
