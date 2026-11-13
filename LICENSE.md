@@ -7,7 +7,7 @@ Este repositorio combina tres licencias según el tipo de material.
 | Material | Licencia | Texto |
 | --- | --- | --- |
 | Contenido del juego: reglas, textos de las cartas, ilustraciones, documentos de `docs/`, datos de `cartas/`, PDF de `imprimir/` y material de `historico/` | Creative Commons Atribución 4.0 Internacional (CC BY 4.0) | [LICENSES/CC-BY-4.0.txt](LICENSES/CC-BY-4.0.txt) |
-| Código de `herramientas/` | MIT | [LICENSES/MIT.txt](LICENSES/MIT.txt) |
+| Código de `herramientas/` y de la versión digital en `app/` | MIT | [LICENSES/MIT.txt](LICENSES/MIT.txt) |
 | Tipografía Bricolage Grotesque en `fuentes/` | SIL Open Font License 1.1 | [fuentes/OFL.txt](fuentes/OFL.txt) |
 
 ## Atribución

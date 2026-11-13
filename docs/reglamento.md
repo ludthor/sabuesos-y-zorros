@@ -70,7 +70,7 @@ Cada bando puede jugar **una carta por pregunta** como máximo. Las habilidades 
 - **Se disputa un territorio cada vez.** El primer bando que gana dos preguntas coloca su ficha grande sobre él y se retiran los marcadores pequeños.
 - **El bando que pierde un territorio elige el siguiente.** Así quien va detrás recupera algo de iniciativa.
 - **Algunas cartas hacen que una pregunta no cuente** para ningún bando, por ejemplo Perro viejo y sabio o Concesión. No se coloca marcador.
-- **Cada territorio dura como máximo cinco preguntas.** Si se llega a ese límite, lo gana quien lleve más preguntas ganadas. En caso de empate, los zorros.
+- **Cada territorio dura como máximo cinco preguntas.** Las preguntas que no cuentan para ningún bando también suman. Si se llega al límite, lo gana quien lleve más preguntas ganadas. En caso de empate, los zorros.
 
 ### 4.4 Derechos de los zorros
 

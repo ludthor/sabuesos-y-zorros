@@ -30,6 +30,9 @@ Funciona con TFG, TFM, tesis doctorales y proyectos en equipo, con tribunales de
 | [`docs/fundamentos.md`](docs/fundamentos.md) | Literatura que sostiene el diseño y preguntas abiertas |
 | [`docs/historial-de-diseno.md`](docs/historial-de-diseno.md) | De la Beta 1 (2015) a la Beta 2 (2026) |
 | [`docs/hoja-de-observacion.md`](docs/hoja-de-observacion.md) | Plantilla para registrar partidas de prueba |
+| [`docs/backlog/`](docs/backlog) | Plan de la versión digital: cortes e historias de usuario |
+| [`docs/adr/`](docs/adr) | Decisiones técnicas de la versión digital |
+| [`CLAUDE.md`](CLAUDE.md) | Instrucciones para los agentes que desarrollan la versión digital |
 | [`cartas/cartas.csv`](cartas/cartas.csv) | Datos de todas las cartas: fuente única para el PDF y futuras versiones digitales |
 | [`herramientas/generar_cartas.py`](herramientas/generar_cartas.py) | Generador del kit imprimible a partir del CSV |
 | [`imprimir/`](imprimir) | PDF listos para imprimir |
@@ -54,7 +57,7 @@ Las contribuciones más útiles ahora mismo son informes de partidas de prueba, 
 ## Licencias
 
 - **Contenido del juego** (reglas, textos de las cartas, ilustraciones, documentos y PDF): [Creative Commons Atribución 4.0 Internacional](LICENSES/CC-BY-4.0.txt).
-- **Código** (`herramientas/`): [MIT](LICENSES/MIT.txt).
+- **Código** (`herramientas/` y `app/`): [MIT](LICENSES/MIT.txt).
 - **Tipografía** Bricolage Grotesque: [SIL Open Font License 1.1](fuentes/OFL.txt).
 
 Detalles en [LICENSE.md](LICENSE.md). Puedes copiar, adaptar, traducir y usar el juego, también con fines comerciales, siempre que cites la autoría. Una atribución adecuada:

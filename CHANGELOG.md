@@ -2,6 +2,18 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Las versiones siguen [Versionado Semántico](https://semver.org/lang/es/).
 
+## [Sin publicar]
+
+### Añadido
+
+- Plan de la versión digital para el modo ensayo: backlog por cortes verticales en `docs/backlog/` y decisiones técnicas en `docs/adr/`.
+- Instrucciones para agentes en `CLAUDE.md`, agente `revisor` y comando `/historia` en `.claude/`.
+
+### Cambiado
+
+- Reglamento §4.3: las preguntas que no cuentan para ningún bando también suman al límite de cinco preguntas por territorio.
+- La licencia MIT cubre también el código de la versión digital (`app/`).
+
 ## [0.2.0-beta] — 2026-11-13
 
 ### Añadido
