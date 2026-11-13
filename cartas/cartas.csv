@@ -1,0 +1,34 @@
+id,tipo,nombre,copias,momento,solo_ensayo,solo_grupo,texto
+C01,cacería,Lazo de tiempo,2,Con la pregunta,0,0,Los zorros tienen 2 minutos para responder.
+C02,cacería,El dibujante,2,Con la pregunta,0,0,La respuesta debe incluir un dibujo o un esquema. Los zorros tienen 1 minuto más para hacerlo.
+C03,cacería,Colmillo encadenado,2,Con la pregunta,0,0,"Tras la respuesta, el sabueso hace una segunda pregunta que parte de ella. Las dos respuestas se valoran juntas."
+C04,cacería,Jauría feroz,2,Con la pregunta,0,0,Un segundo sabueso puede repreguntar sobre la misma cuestión.
+C05,cacería,Olfato aguzado,2,Con la pregunta,0,1,El sabueso elige qué zorro responde. No puede ser quien respondió la pregunta anterior.
+C06,cacería,Perro viejo y desconfiado,3,Con la pregunta,0,0,"Tras responder, los zorros dan una segunda justificación con un argumento o una evidencia nueva. Se valora la respuesta completa."
+C07,cacería,Contraejemplo,2,Con la pregunta,0,0,El sabueso presenta un caso o un dato que contradice una afirmación de los zorros. Los zorros explican la discrepancia.
+C08,cacería,¿Y si…?,2,Con la pregunta,0,0,"El sabueso cambia un supuesto del proyecto: otro contexto, otros datos u otra población. Los zorros razonan qué cambiaría."
+C09,cacería,Huella,2,Con la pregunta,0,0,"Los zorros indican la fuente, el dato o la decisión que sostiene una afirmación concreta."
+C10,cacería,Ciego pero con instinto,2,En lugar de preguntar,0,0,"Los zorros señalan una debilidad de su proyecto en este territorio y cómo la abordarían. Si está bien identificada, no cuenta para ningún bando. Si no, la gana el sabueso."
+C11,cacería,Perro viejo y sabio,3,En lugar de preguntar,0,0,El sabueso da un consejo a los zorros. Este turno no cuenta para ningún bando.
+C12,cacería,Hueso duro de roer,1,Reacción,0,0,Anula la carta de supervivencia que acaban de jugar los zorros.
+S01,supervivencia,Instinto salvaje,2,Antes de la pregunta (al empezar un territorio),0,0,Los zorros hablan 3 minutos sin interrupciones sobre este territorio. No cuenta como respuesta.
+S02,supervivencia,Pregunta temida,2,Antes de la pregunta,0,0,"Este turno, los zorros formulan la pregunta que más temen sobre este territorio y la responden. Si no es pertinente, la gana el sabueso. Si lo es, se valora como cualquier otra."
+S03,supervivencia,Silencio nocturno,1,Antes de la pregunta,1,0,Un sabueso elegido por los zorros no puede preguntar hasta que acabe este territorio. No se usa con un solo sabueso.
+S04,supervivencia,Madriguera,3,En respuesta,0,0,"Pausa de 2 minutos antes de responder: en equipo, para deliberar; a solas, para pensar."
+S05,supervivencia,Espejo sagaz,2,En respuesta,0,0,"El sabueso que pregunta responde brevemente o da una pista. Después, los zorros responden igualmente."
+S06,supervivencia,Mirada aguda,2,En respuesta,0,0,Los zorros señalan un supuesto de la pregunta que no comparten. El sabueso la reformula sin él.
+S07,supervivencia,Cambio de sendero,2,En respuesta,0,0,"Los zorros conectan la pregunta con otra parte del proyecto y justifican la conexión. Si el tribunal la rechaza, responden la pregunta original."
+S08,supervivencia,Rastro documental,2,En respuesta,0,0,Los zorros indican dónde está la respuesta en la memoria o en el material y la explican en 1 minuto.
+S09,supervivencia,Concesión,2,En respuesta,0,0,"Los zorros admiten una limitación relacionada con la pregunta y proponen cómo la abordarían. Si convence, no cuenta para ningún bando. Si no, responden normalmente."
+S10,supervivencia,Hermandad,1,En respuesta,0,1,Anula Olfato aguzado. Responde quien decida el equipo.
+R01,rol,Presidente,1,,0,0,"Abre y cierra la partida. Valora las respuestas a las preguntas de los demás. Una vez por partida, anula una carta de cualquier bando."
+R02,rol,Secretario,1,,0,0,"Lleva el tiempo y los marcadores. Valora las respuestas a las preguntas del presidente. Una vez por territorio, «Que conste en acta»: los zorros resumen su última respuesta en una frase."
+R03,rol,Vocal,3,,0,0,"Al empezar, elige un territorio de especialidad. Cuando pregunta en él, los sabuesos roban una carta adicional al final del turno."
+R04,rol,Supervisor,1,,0,0,"En modo ensayo, juega como un sabueso más. En modo tribunal no pregunta: una vez por partida, puede aclarar el contexto del proyecto sin responder por los zorros."
+T01,territorio,Pregunta y objetivos,1,,0,0,¿Qué problema aborda el proyecto y qué quiere conseguir?
+T02,territorio,Antecedentes,1,,0,0,¿Qué se sabía antes y en qué se apoya?
+T03,territorio,Método,1,,0,0,¿Cómo se hizo y por qué así?
+T04,territorio,Resultados,1,,0,0,¿Qué se obtuvo y qué significa?
+T05,territorio,Limitaciones,1,,0,0,¿Qué no cubre y qué podría fallar?
+T06,territorio,Contribución,1,,0,0,¿Qué aporta y a quién?
+X01,rúbrica,Rúbrica,1,,0,0,"Una respuesta es satisfactoria si responde a lo que se preguntó y cumple al menos uno de estos dos criterios: se apoya en datos, fuentes o decisiones del proyecto, o reconoce lo que no sabe o lo que el proyecto no cubre."

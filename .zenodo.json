@@ -1,0 +1,23 @@
+{
+  "title": "Sabuesos y Zorros: un juego de cartas para defender proyectos ante un tribunal",
+  "upload_type": "lesson",
+  "description": "Juego de cartas para la defensa oral de proyectos ante un tribunal (TFG, TFM, tesis y proyectos en equipo). El tribunal (sabuesos) busca debilidades del proyecto y los estudiantes (zorros) lo defienden. Incluye reglamento, kit imprimible de 57 cartas, datos de las cartas en CSV y el generador del kit.",
+  "creators": [
+    {
+      "name": "Ortiz Beltrán, Ariel",
+      "orcid": "0000-0003-1522-2362"
+    }
+  ],
+  "license": "cc-by-4.0",
+  "language": "spa",
+  "version": "0.2.0-beta",
+  "keywords": [
+    "juego de cartas",
+    "defensa oral",
+    "evaluación oral",
+    "aprendizaje basado en juegos",
+    "educación superior",
+    "game-based learning",
+    "oral assessment"
+  ]
+}
