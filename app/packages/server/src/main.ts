@@ -21,7 +21,13 @@ const lanOrigins = listensOnNetwork
       .filter((net) => net && net.family === 'IPv4' && !net.internal)
       .map((net) => `http://${net!.address}:${port}`)
   : [];
-const shareOrigin = resolveShareOrigin(process.env.PUBLIC_URL, lanOrigins);
+let shareOrigin: string | null;
+try {
+  shareOrigin = resolveShareOrigin(process.env.PUBLIC_URL, lanOrigins);
+} catch (error) {
+  console.error((error as Error).message);
+  process.exit(1);
+}
 
 const server = createSyzServer({ handleHttp: (req, res) => handleHttp(req, res), shareOrigin });
 
