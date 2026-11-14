@@ -19,3 +19,4 @@ Como diseñador del juego, quiero una dirección pública que se actualice con c
 ## Notas
 
 - Empieza comparando dos o tres proveedores con los criterios de ADR-0004 y registra la elección en ese ADR.
+- Antes de abrir la dirección al público, limitar cuántas salas puede haber a la vez: ahora cualquiera puede crear salas sin fin y cada una ocupa memoria 4 horas (revisión de C0-01).

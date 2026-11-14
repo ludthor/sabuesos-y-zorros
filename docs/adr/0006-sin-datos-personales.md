@@ -9,7 +9,7 @@ El juego se usa con estudiantes y tribunales. El reglamento dice que el marcador
 ## Decisión
 
 - No hay cuentas de usuario.
-- La sala guarda solo el estado de la partida y caduca tras un periodo sin actividad (propuesta inicial: 4 horas, se confirma en C0-01).
+- La sala guarda solo el estado de la partida y caduca tras 4 horas sin actividad (confirmado por Ariel en C0-01, 2026-11-14).
 - Los nombres que se escriban para identificar a los jugadores, si los hay, viven solo en la sala y desaparecen con ella.
 - El registro de la partida de prueba (historia C1-05) se descarga en el dispositivo del organizador y no se guarda en el servidor.
 

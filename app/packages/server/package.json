@@ -1,0 +1,16 @@
+{
+  "name": "@syz/server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --ignore '../client/**' --ignore '../../node_modules/**' src/main.ts",
+    "start": "NODE_ENV=production tsx src/main.ts"
+  },
+  "dependencies": {
+    "@syz/engine": "*",
+    "@syz/protocol": "*",
+    "tsx": "^4.23.15",
+    "vite": "^8.3.8",
+    "ws": "^8.23.0"
+  }
+}
