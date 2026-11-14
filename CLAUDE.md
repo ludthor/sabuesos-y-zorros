@@ -83,7 +83,22 @@ Si cambia una regla o una carta: actualiza `docs/reglamento.md` y `cartas/cartas
 ## Comandos
 
 - `make pdf`: regenera el kit imprimible a partir de `cartas/cartas.csv`.
-- Los comandos de la app (instalar, probar, arrancar) los define C0-01 y se añaden aquí.
+
+La app (Node 22 o posterior) se maneja desde `app/`:
+
+- `npm install`: instala las dependencias de todos los paquetes.
+- `npm test`: ejecuta todas las pruebas (Vitest). `npm run typecheck` comprueba los tipos.
+- `npm run dev`: arranca servidor e interfaz en `http://localhost:3000` (cambia el puerto con `PORT`). Imprime también la dirección en la red local, que es la que hay que abrir desde un móvil.
+- `npm run build` y después `npm start`: compila la interfaz y arranca el servidor en modo producción.
+
+Paquetes de `app/packages/`:
+
+| Paquete | Contenido |
+| --- | --- |
+| `engine` | Motor de reglas puro (ADR-0002). Sin red, sin interfaz, sin `Date.now` ni azar sin inyectar. |
+| `protocol` | Mensajes entre cliente y servidor y utilidades del código de sala. Sin reglas del juego. |
+| `server` | Servidor de salas: HTTP, websockets en `/ws`, salas en memoria con caducidad (ADR-0001, 0003, 0006). |
+| `client` | Interfaz en React con Vite. En desarrollo la sirve el propio servidor, en el mismo puerto. |
 
 ## Privacidad
 

@@ -2,7 +2,7 @@
 id: C0-01
 titulo: Crear una sala
 corte: C0
-estado: lista
+estado: en curso
 reglamento: "—"
 depende_de: []
 ---
@@ -21,5 +21,5 @@ Como organizador, quiero crear una sala y obtener un código y un QR para que lo
 
 - Es la primera historia de código: crea `app/` siguiendo ADR-0001, ADR-0002 y ADR-0003, con el motor de reglas, el servidor y el cliente como piezas separadas.
 - Añade a `CLAUDE.md` los comandos para instalar, probar y arrancar la app.
-- Caducidad propuesta: 4 horas sin actividad (ADR-0006). Confirmar con Ariel al empezar.
+- Caducidad: 4 horas sin actividad (ADR-0006). Confirmada por Ariel el 2026-11-14.
 - El código evita caracteres que se confunden al dictarlo en voz alta (por ejemplo, 0 y O, 1 e I).
