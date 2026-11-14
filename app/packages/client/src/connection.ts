@@ -46,7 +46,8 @@ export function connectToServer(url = defaultUrl()): Connection {
       const data = JSON.stringify(msg);
       if (ws.readyState === WebSocket.OPEN) ws.send(data);
       else if (ws.readyState === WebSocket.CONNECTING) pending.push(data);
-      else onLost();
+      // Sin conexión, cada intento vuelve a avisar: la interfaz nunca se queda esperando.
+      else emit({ type: 'connection_lost' });
     },
     subscribe(listener) {
       listeners.add(listener);

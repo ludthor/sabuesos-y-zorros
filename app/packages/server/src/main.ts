@@ -3,6 +3,7 @@ import { networkInterfaces } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createSyzServer } from './server.ts';
+import { resolveShareOrigin } from './share-origin.ts';
 import { serveStatic } from './static.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -20,8 +21,7 @@ const lanOrigins = listensOnNetwork
       .filter((net) => net && net.family === 'IPv4' && !net.internal)
       .map((net) => `http://${net!.address}:${port}`)
   : [];
-// PUBLIC_URL fija la dirección que se comparte; si no, la primera de la red local.
-const shareOrigin = process.env.PUBLIC_URL ?? lanOrigins[0] ?? null;
+const shareOrigin = resolveShareOrigin(process.env.PUBLIC_URL, lanOrigins);
 
 const server = createSyzServer({ handleHttp: (req, res) => handleHttp(req, res), shareOrigin });
 

@@ -54,7 +54,7 @@ export function App({ connection }: { connection: Connection }) {
         case 'welcome':
           return setShareOrigin(msg.shareOrigin);
         case 'connection_lost':
-          backHome();
+          // La dirección no cambia: al recargar, /sala/CÓDIGO vuelve a entrar si la sala sigue viva.
           return setView({ name: 'home', notice: NOTICES.lost });
         case 'room_created':
         case 'room_joined':
@@ -190,7 +190,7 @@ function RoomScreen({ code, shareOrigin }: { code: string; shareOrigin: string |
       <RoomQr code={code} url={url} />
       <p className="room__help">
         Los sabuesos y los zorros entran escaneando el QR o escribiendo el código en{' '}
-        <strong>{new URL(origin).host}</strong>.
+        <strong>{origin.replace(/^[a-z]+:\/\//i, '')}</strong>.
       </p>
       {local && !shareOrigin && (
         <p className="notice" role="alert">

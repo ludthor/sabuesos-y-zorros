@@ -129,6 +129,23 @@ describe('página de inicio (C0-01)', () => {
 
     expect(screen.getByRole('alert').textContent).toBe(NOTICES.lost);
     expect((screen.getByRole('button', { name: 'Nueva partida' }) as HTMLButtonElement).disabled).toBe(false);
+
+    // Un nuevo intento sin conexión vuelve a avisar (la conexión emite otra vez connection_lost).
+    fireEvent.click(screen.getByRole('button', { name: 'Nueva partida' }));
+    await reply({ type: 'connection_lost' });
+    expect(screen.getByRole('alert').textContent).toBe(NOTICES.lost);
+    expect((screen.getByRole('button', { name: 'Nueva partida' }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('si se pierde la conexión dentro de una sala, la dirección se conserva para volver al recargar', async () => {
+    const { connection, reply } = fakeConnection();
+    render(<App connection={connection} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Nueva partida' }));
+    await reply({ type: 'room_created', code: 'K7MPX' });
+    await reply({ type: 'connection_lost' });
+
+    expect(screen.getByRole('alert').textContent).toBe(NOTICES.lost);
+    expect(window.location.pathname).toBe('/sala/K7MPX');
   });
 
   it('los avisos salen de las constantes del protocolo', () => {

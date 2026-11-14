@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ROOM_CODE_ALPHABET,
+  ROOM_CODE_CONFUSABLES,
   ROOM_CODE_LENGTH,
   isRoomCode,
   normalizeRoomCode,
@@ -10,7 +11,8 @@ import {
 
 describe('código de sala (C0-01)', () => {
   it('no usa caracteres que se confunden al dictarlos', () => {
-    for (const c of ['0', 'O', '1', 'I', 'L']) expect(ROOM_CODE_ALPHABET).not.toContain(c);
+    expect(ROOM_CODE_CONFUSABLES).toEqual(expect.arrayContaining(['0', 'O', '1', 'I', 'L']));
+    for (const c of ROOM_CODE_CONFUSABLES) expect(ROOM_CODE_ALPHABET).not.toContain(c);
   });
 
   it('es corto', () => {
