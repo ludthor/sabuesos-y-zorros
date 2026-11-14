@@ -1,14 +1,33 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
+  ROOM_CODE_CONFUSABLES,
   ROOM_CODE_LENGTH,
+  ROOM_TTL_MS,
   isRoomCode,
   normalizeRoomCode,
   parseRoomPath,
   roomPath,
-  type ServerMessage,
 } from '@syz/protocol';
-import type { Connection } from './connection.ts';
+import type { Connection, ConnectionEvent } from './connection.ts';
 import { RoomQr } from './RoomQr.tsx';
+
+/** «0, O, 1, I ni L» */
+function listWithNi(items: readonly string[]): string {
+  return items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} ni ${items.at(-1)}`;
+}
+
+const TTL_HOURS = ROOM_TTL_MS / (60 * 60 * 1000);
+export const NOTICES = {
+  badShape: `Un código de sala tiene ${ROOM_CODE_LENGTH} caracteres, sin ${listWithNi(ROOM_CODE_CONFUSABLES)}.`,
+  expired: `La sala ha caducado tras ${TTL_HOURS} horas sin actividad.`,
+  notFound: (code: string) => `No hay ninguna sala con el código ${code}. Conviene revisarlo.`,
+  lost: 'Se ha perdido la conexión con el servidor. Hay que recargar la página.',
+  failed: 'Algo ha fallado. Hay que volver a intentarlo.',
+};
+
+function isLoopback(hostname: string): boolean {
+  return hostname === 'localhost' || hostname === '[::1]' || hostname.startsWith('127.');
+}
 
 type View =
   | { name: 'home'; notice?: string }
@@ -27,25 +46,29 @@ export function App({ connection }: { connection: Connection }) {
   const initialCode = useRef(parseRoomPath(window.location.pathname));
   const requestedCode = useRef<string | null>(initialCode.current);
   const [view, setView] = useState<View>(initialCode.current ? { name: 'waiting' } : { name: 'home' });
+  const [shareOrigin, setShareOrigin] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = connection.subscribe((msg: ServerMessage) => {
+    const unsubscribe = connection.subscribe((msg: ConnectionEvent) => {
       switch (msg.type) {
+        case 'welcome':
+          return setShareOrigin(msg.shareOrigin);
+        case 'connection_lost':
+          backHome();
+          return setView({ name: 'home', notice: NOTICES.lost });
         case 'room_created':
         case 'room_joined':
           goTo(roomPath(msg.code));
           return setView({ name: 'room', code: msg.code });
         case 'room_expired':
           backHome();
-          return setView({ name: 'home', notice: 'La sala ha caducado tras 4 horas sin actividad.' });
+          return setView({ name: 'home', notice: NOTICES.expired });
         case 'error':
           backHome();
           return setView({
             name: 'home',
             notice:
-              msg.error === 'room_not_found'
-                ? `No hay ninguna sala con el código ${requestedCode.current ?? ''}. Conviene revisarlo.`
-                : 'Algo ha fallado. Hay que volver a intentarlo.',
+              msg.error === 'room_not_found' ? NOTICES.notFound(requestedCode.current ?? '') : NOTICES.failed,
           });
       }
     });
@@ -69,10 +92,7 @@ export function App({ connection }: { connection: Connection }) {
   function joinRoom(raw: string) {
     const code = normalizeRoomCode(raw);
     if (!isRoomCode(code)) {
-      return setView({
-        name: 'home',
-        notice: `Un código de sala tiene ${ROOM_CODE_LENGTH} caracteres, sin 0, O, 1, I ni L.`,
-      });
+      return setView({ name: 'home', notice: NOTICES.badShape });
     }
     requestedCode.current = code;
     setView({ name: 'waiting' });
@@ -82,7 +102,7 @@ export function App({ connection }: { connection: Connection }) {
   return (
     <main className="page">
       {view.name === 'room' ? (
-        <RoomScreen code={view.code} />
+        <RoomScreen code={view.code} shareOrigin={shareOrigin} />
       ) : (
         <HomeScreen
           notice={view.name === 'home' ? view.notice : undefined}
@@ -155,8 +175,11 @@ function HomeScreen(props: {
   );
 }
 
-function RoomScreen({ code }: { code: string }) {
-  const url = `${window.location.origin}${roomPath(code)}`;
+function RoomScreen({ code, shareOrigin }: { code: string; shareOrigin: string | null }) {
+  // Abierta en localhost, la dirección propia no sirve a un móvil: se usa la que da el servidor.
+  const local = isLoopback(window.location.hostname);
+  const origin = local && shareOrigin ? shareOrigin : window.location.origin;
+  const url = `${origin}${roomPath(code)}`;
   return (
     <section className="room">
       <Title />
@@ -167,8 +190,14 @@ function RoomScreen({ code }: { code: string }) {
       <RoomQr code={code} url={url} />
       <p className="room__help">
         Los sabuesos y los zorros entran escaneando el QR o escribiendo el código en{' '}
-        <strong>{window.location.host}</strong>.
+        <strong>{new URL(origin).host}</strong>.
       </p>
+      {local && !shareOrigin && (
+        <p className="notice" role="alert">
+          Este QR lleva a este ordenador y no funcionará en un móvil. Hay que abrir la app con la
+          dirección de la red local.
+        </p>
+      )}
     </section>
   );
 }

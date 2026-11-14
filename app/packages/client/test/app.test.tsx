@@ -1,13 +1,13 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { ClientMessage, ServerMessage } from '@syz/protocol';
-import { App } from '../src/App.tsx';
-import type { Connection } from '../src/connection.ts';
+import type { ClientMessage } from '@syz/protocol';
+import { App, NOTICES } from '../src/App.tsx';
+import type { Connection, ConnectionEvent } from '../src/connection.ts';
 
 /** Conexión falsa: guarda lo enviado y deja que la prueba responda como el servidor. */
 function fakeConnection() {
   const sent: ClientMessage[] = [];
-  const listeners = new Set<(m: ServerMessage) => void>();
+  const listeners = new Set<(m: ConnectionEvent) => void>();
   const connection: Connection = {
     send: (m) => void sent.push(m),
     subscribe(cb) {
@@ -15,7 +15,7 @@ function fakeConnection() {
       return () => listeners.delete(cb);
     },
   };
-  const reply = (m: ServerMessage) => act(() => listeners.forEach((l) => l(m)));
+  const reply = (m: ConnectionEvent) => act(() => listeners.forEach((l) => l(m)));
   return { connection, sent, reply };
 }
 
@@ -96,5 +96,43 @@ describe('página de inicio (C0-01)', () => {
     expect(screen.getByRole('alert')).toBeDefined();
     expect(screen.queryByTestId('room-code')).toBeNull();
     expect(window.location.pathname).toBe('/');
+  });
+
+  it('abierta en localhost, el QR usa la dirección de red local que da el servidor', async () => {
+    const { connection, reply } = fakeConnection();
+    render(<App connection={connection} />);
+    await reply({ type: 'welcome', shareOrigin: 'http://192.168.1.10:3000' });
+    fireEvent.click(screen.getByRole('button', { name: 'Nueva partida' }));
+    await reply({ type: 'room_created', code: 'K7MPX' });
+
+    const qr = await screen.findByRole('img', { name: /QR/ });
+    expect(qr.getAttribute('data-url')).toBe('http://192.168.1.10:3000/sala/K7MPX');
+    expect(screen.getByText('192.168.1.10:3000')).toBeDefined();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('abierta en localhost sin dirección de red local, avisa de que el QR no sirve a un móvil', async () => {
+    const { connection, reply } = fakeConnection();
+    render(<App connection={connection} />);
+    await reply({ type: 'welcome', shareOrigin: null });
+    fireEvent.click(screen.getByRole('button', { name: 'Nueva partida' }));
+    await reply({ type: 'room_created', code: 'K7MPX' });
+
+    expect(screen.getByRole('alert').textContent).toMatch(/móvil/);
+  });
+
+  it('si se pierde la conexión, se avisa en lugar de quedarse esperando', async () => {
+    const { connection, reply } = fakeConnection();
+    render(<App connection={connection} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Nueva partida' }));
+    await reply({ type: 'connection_lost' });
+
+    expect(screen.getByRole('alert').textContent).toBe(NOTICES.lost);
+    expect((screen.getByRole('button', { name: 'Nueva partida' }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('los avisos salen de las constantes del protocolo', () => {
+    expect(NOTICES.expired).toBe('La sala ha caducado tras 4 horas sin actividad.');
+    expect(NOTICES.badShape).toBe('Un código de sala tiene 5 caracteres, sin 0, O, 1, I ni L.');
   });
 });

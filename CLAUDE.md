@@ -88,7 +88,7 @@ La app (Node 22 o posterior) se maneja desde `app/`:
 
 - `npm install`: instala las dependencias de todos los paquetes.
 - `npm test`: ejecuta todas las pruebas (Vitest). `npm run typecheck` comprueba los tipos.
-- `npm run dev`: arranca servidor e interfaz en `http://localhost:3000` (cambia el puerto con `PORT`). Imprime también la dirección en la red local, que es la que hay que abrir desde un móvil.
+- `npm run dev`: arranca servidor e interfaz en `http://localhost:3000` (cambia el puerto con `PORT`). Imprime también la dirección en la red local. Aunque el organizador abra `localhost`, el QR de la sala lleva a esa dirección de red local para que los móviles lleguen; `PUBLIC_URL` fija otra.
 - `npm run build` y después `npm start`: compila la interfaz y arranca el servidor en modo producción.
 
 Paquetes de `app/packages/`:

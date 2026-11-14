@@ -3,9 +3,13 @@
  * Lo comparten cliente y servidor; no contiene reglas del juego.
  */
 
-/** Sin 0, O, 1, I ni L: se confunden al dictar el código en voz alta (C0-01). */
+/** Caracteres que se confunden al dictar el código en voz alta (C0-01). */
+export const ROOM_CODE_CONFUSABLES = ['0', 'O', '1', 'I', 'L'] as const;
 export const ROOM_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 export const ROOM_CODE_LENGTH = 5;
+
+/** Una sala se elimina tras 4 horas sin actividad (ADR-0006, confirmado en C0-01). */
+export const ROOM_TTL_MS = 4 * 60 * 60 * 1000;
 
 const ROOM_CODE_RE = new RegExp(`^[${ROOM_CODE_ALPHABET}]{${ROOM_CODE_LENGTH}}$`);
 
@@ -34,6 +38,8 @@ export type ClientMessage =
 export type ErrorCode = 'room_not_found' | 'bad_message';
 
 export type ServerMessage =
+  /** Al conectar: dirección que deben usar los demás dispositivos, si el servidor la conoce. */
+  | { type: 'welcome'; shareOrigin: string | null }
   | { type: 'room_created'; code: string }
   | { type: 'room_joined'; code: string }
   | { type: 'room_expired' }

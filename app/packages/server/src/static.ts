@@ -32,9 +32,17 @@ export function serveStatic(root: string) {
       // Un archivo compilado que no existe es un error, no una ruta de la app.
       else if (pathname.startsWith('/assets/')) return void res.writeHead(404).end();
     }
+    if (!(await stat(file).catch(() => undefined))?.isFile()) {
+      // Por ejemplo, `npm start` sin `npm run build`.
+      return void res
+        .writeHead(503, { 'Content-Type': 'text/plain; charset=utf-8' })
+        .end('Falta compilar la interfaz: npm run build');
+    }
     const type = TYPES[extname(file)] ?? 'application/octet-stream';
     const cache = file.includes(`${sep}assets${sep}`) ? 'public, max-age=31536000, immutable' : 'no-cache';
     res.writeHead(200, { 'Content-Type': type, 'Cache-Control': cache });
-    createReadStream(file).pipe(res);
+    createReadStream(file)
+      .on('error', () => res.destroy())
+      .pipe(res);
   };
 }

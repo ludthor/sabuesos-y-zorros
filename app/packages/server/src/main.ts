@@ -13,7 +13,17 @@ const host = process.env.HOST ?? '0.0.0.0';
 
 type Handler = (req: IncomingMessage, res: ServerResponse) => void;
 let handleHttp: Handler = (_req, res) => void res.writeHead(503).end();
-const server = createSyzServer({ handleHttp: (req, res) => handleHttp(req, res) });
+const listensOnNetwork = host === '0.0.0.0' || host === '::';
+const lanOrigins = listensOnNetwork
+  ? Object.values(networkInterfaces())
+      .flat()
+      .filter((net) => net && net.family === 'IPv4' && !net.internal)
+      .map((net) => `http://${net!.address}:${port}`)
+  : [];
+// PUBLIC_URL fija la dirección que se comparte; si no, la primera de la red local.
+const shareOrigin = process.env.PUBLIC_URL ?? lanOrigins[0] ?? null;
+
+const server = createSyzServer({ handleHttp: (req, res) => handleHttp(req, res), shareOrigin });
 
 if (production) {
   handleHttp = serveStatic(resolve(clientRoot, 'dist'));
@@ -31,10 +41,6 @@ if (production) {
 
 await server.listen(port, host);
 
-console.log(`Sabuesos y Zorros${production ? '' : ' (desarrollo)'} en:`);
-console.log(`  http://localhost:${port}`);
-for (const nets of Object.values(networkInterfaces())) {
-  for (const net of nets ?? []) {
-    if (net.family === 'IPv4' && !net.internal) console.log(`  http://${net.address}:${port}`);
-  }
-}
+console.log(`Sabuesos y Zorros${production ? '' : ' (desarrollo)'} en http://localhost:${port}`);
+for (const origin of lanOrigins) console.log(`  en la red local: ${origin}`);
+if (shareOrigin) console.log(`  el QR de las salas lleva a ${shareOrigin}`);

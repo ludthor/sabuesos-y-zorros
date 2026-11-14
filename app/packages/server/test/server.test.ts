@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import WebSocket from 'ws';
 import { isRoomCode, type ClientMessage, type ServerMessage } from '@syz/protocol';
 import { ROOM_TTL_MS, RoomStore } from '../src/rooms.ts';
@@ -13,14 +13,20 @@ afterEach(async () => {
   server = undefined;
 });
 
-async function start(store = new RoomStore()) {
-  server = createSyzServer({ store, sweepIntervalMs: 0 });
+async function start(store = new RoomStore(), shareOrigin?: string) {
+  server = createSyzServer({ store, sweepIntervalMs: 0, shareOrigin });
   const port = await server.listen(0, '127.0.0.1');
   return { url: `ws://127.0.0.1:${port}/ws`, store };
 }
 
 /** Un cliente de prueba que guarda los mensajes que recibe. */
 async function client(url: string) {
+  const c = await rawClient(url);
+  await c.next(); // el saludo «welcome» que llega al conectar
+  return c;
+}
+
+async function rawClient(url: string) {
   const ws = new WebSocket(url);
   sockets.push(ws);
   const inbox: ServerMessage[] = [];
@@ -35,6 +41,7 @@ async function client(url: string) {
   });
   return {
     ws,
+    inbox,
     send: (msg: ClientMessage | Record<string, unknown>) => ws.send(JSON.stringify(msg)),
     async next(): Promise<ServerMessage> {
       while (inbox.length === 0) await new Promise<void>((r) => waiters.push(r));
@@ -122,4 +129,29 @@ describe('servidor de salas (C0-01)', () => {
     server!.sweep();
     expect(store.find(created.code)).toBeDefined();
   });
+
+  it('al conectar, indica la dirección que deben usar los demás dispositivos', async () => {
+    const { url } = await start(new RoomStore(), 'http://192.168.1.10:3000');
+    const c = await rawClient(url);
+    expect(await c.next()).toEqual({ type: 'welcome', shareOrigin: 'http://192.168.1.10:3000' });
+  });
+
+  it('el servidor elimina por sí solo las salas caducadas, sin que nadie lo pida', () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    try {
+      let now = 0;
+      const store = new RoomStore({ now: () => now });
+      const own = createSyzServer({ store }); // intervalo por defecto
+      const room = store.create();
+
+      now += ROOM_TTL_MS;
+      vi.advanceTimersByTime(60 * 1000);
+
+      expect(store.find(room.code)).toBeUndefined();
+      void own.close();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
+

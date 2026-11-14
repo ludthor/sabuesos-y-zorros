@@ -1,9 +1,8 @@
 import { randomInt as cryptoRandomInt } from 'node:crypto';
 import { createGame, type GameState } from '@syz/engine';
-import { ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from '@syz/protocol';
+import { ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH, ROOM_TTL_MS } from '@syz/protocol';
 
-/** Una sala se elimina tras 4 horas sin actividad (ADR-0006, confirmado en C0-01). */
-export const ROOM_TTL_MS = 4 * 60 * 60 * 1000;
+export { ROOM_TTL_MS };
 
 export interface Room {
   code: string;

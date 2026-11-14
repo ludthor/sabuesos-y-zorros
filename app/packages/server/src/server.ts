@@ -18,6 +18,11 @@ export interface SyzServerOptions {
   handleHttp?: (req: IncomingMessage, res: ServerResponse) => void;
   /** Cada cuánto se buscan salas caducadas. 0 lo desactiva (pruebas). */
   sweepIntervalMs?: number;
+  /**
+   * Dirección por la que otros dispositivos llegan a este servidor, por ejemplo
+   * http://192.168.1.10:3000. El cliente la usa en el QR si él mismo se abrió en localhost.
+   */
+  shareOrigin?: string | null;
 }
 
 export interface SyzServer {
@@ -75,6 +80,7 @@ export function createSyzServer(options: SyzServerOptions = {}): SyzServer {
   }
 
   wss.on('connection', (ws) => {
+    send(ws, { type: 'welcome', shareOrigin: options.shareOrigin ?? null });
     ws.on('message', (data) => {
       const msg = parseClientMessage(String(data));
       if (!msg) return send(ws, { type: 'error', error: 'bad_message' });
