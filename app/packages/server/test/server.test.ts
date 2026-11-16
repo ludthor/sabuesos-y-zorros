@@ -179,12 +179,18 @@ describe('servidor de salas (C0-01)', () => {
       let now = 0;
       const store = new RoomStore({ now: () => now });
       const own = createSyzServer({ store }); // intervalo por defecto
-      const room = store.create();
+      const unused = store.create();
+      const used = store.create();
+      store.markJoined(used.code);
 
       now += ROOM_UNUSED_TTL_MS;
       vi.advanceTimersByTime(60 * 1000);
+      expect(store.find(unused.code)).toBeUndefined();
+      expect(store.find(used.code)).toBeDefined();
 
-      expect(store.find(room.code)).toBeUndefined();
+      now += ROOM_TTL_MS;
+      vi.advanceTimersByTime(60 * 1000);
+      expect(store.find(used.code)).toBeUndefined();
       void own.close();
     } finally {
       vi.useRealTimers();
