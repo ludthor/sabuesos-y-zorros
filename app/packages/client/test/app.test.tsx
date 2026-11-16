@@ -91,9 +91,21 @@ describe('página de inicio (C0-01)', () => {
     render(<App connection={connection} />);
     fireEvent.click(screen.getByRole('button', { name: 'Nueva partida' }));
     await reply({ type: 'room_created', code: 'K7MPX' });
-    await reply({ type: 'room_expired' });
+    await reply({ type: 'room_expired', reason: 'inactive' });
 
-    expect(screen.getByRole('alert')).toBeDefined();
+    expect(screen.getByRole('alert').textContent).toBe(NOTICES.expired);
+    expect(screen.queryByTestId('room-code')).toBeNull();
+    expect(window.location.pathname).toBe('/');
+  });
+
+  it('si nadie se une en 15 minutos, se avisa de por qué se cerró la sala', async () => {
+    const { connection, reply } = fakeConnection();
+    render(<App connection={connection} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Nueva partida' }));
+    await reply({ type: 'room_created', code: 'K7MPX' });
+    await reply({ type: 'room_expired', reason: 'unused' });
+
+    expect(screen.getByRole('alert').textContent).toBe(NOTICES.unused);
     expect(screen.queryByTestId('room-code')).toBeNull();
     expect(window.location.pathname).toBe('/');
   });
@@ -150,6 +162,7 @@ describe('página de inicio (C0-01)', () => {
 
   it('los avisos salen de las constantes del protocolo', () => {
     expect(NOTICES.expired).toBe('La sala ha caducado tras 4 horas sin actividad.');
+    expect(NOTICES.unused).toBe('La sala se ha cerrado porque nadie se unió en 15 minutos.');
     expect(NOTICES.badShape).toBe('Un código de sala tiene 5 caracteres, sin 0, O, 1, I ni L.');
   });
 });

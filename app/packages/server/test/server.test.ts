@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import WebSocket from 'ws';
 import { isRoomCode, type ClientMessage, type ServerMessage } from '@syz/protocol';
-import { ROOM_TTL_MS, RoomStore } from '../src/rooms.ts';
+import { ROOM_TTL_MS, ROOM_UNUSED_TTL_MS, RoomStore } from '../src/rooms.ts';
 import { createSyzServer, type SyzServer } from '../src/server.ts';
 
 let server: SyzServer | undefined;
@@ -99,17 +99,54 @@ describe('servidor de salas (C0-01)', () => {
     organizer.send({ type: 'create_room' });
     const created = await organizer.next();
     if (created.type !== 'room_created') throw new Error('sin sala');
+    const other = await client(url);
+    other.send({ type: 'join_room', code: created.code });
+    await other.next();
 
     now += ROOM_TTL_MS;
     server!.sweep();
 
-    expect(await organizer.next()).toEqual({ type: 'room_expired' });
+    expect(await organizer.next()).toEqual({ type: 'room_expired', reason: 'inactive' });
+    expect(await other.next()).toEqual({ type: 'room_expired', reason: 'inactive' });
     expect(store.find(created.code)).toBeUndefined();
     expect(server!.joinedCount()).toBe(0);
 
     const late = await client(url);
     late.send({ type: 'join_room', code: created.code });
     expect(await late.next()).toEqual({ type: 'error', error: 'room_not_found' });
+  });
+
+  it('si nadie se une en 15 minutos, la sala se cierra y avisa al organizador', async () => {
+    let now = 0;
+    const { url, store } = await start(new RoomStore({ now: () => now }));
+    const organizer = await client(url);
+    organizer.send({ type: 'create_room' });
+    const created = await organizer.next();
+    if (created.type !== 'room_created') throw new Error('sin sala');
+
+    now += ROOM_UNUSED_TTL_MS;
+    server!.sweep();
+
+    expect(await organizer.next()).toEqual({ type: 'room_expired', reason: 'unused' });
+    expect(store.find(created.code)).toBeUndefined();
+  });
+
+  it('cuando otro dispositivo entra, la sala ya no se cierra a los 15 minutos', async () => {
+    let now = 0;
+    const { url, store } = await start(new RoomStore({ now: () => now }));
+    const organizer = await client(url);
+    organizer.send({ type: 'create_room' });
+    const created = await organizer.next();
+    if (created.type !== 'room_created') throw new Error('sin sala');
+
+    now += ROOM_UNUSED_TTL_MS - 1000;
+    const other = await client(url);
+    other.send({ type: 'join_room', code: created.code });
+    await other.next();
+
+    now += ROOM_UNUSED_TTL_MS * 2;
+    server!.sweep();
+    expect(store.find(created.code)).toBeDefined();
   });
 
   it('los mensajes de la sala cuentan como actividad', async () => {
@@ -144,7 +181,7 @@ describe('servidor de salas (C0-01)', () => {
       const own = createSyzServer({ store }); // intervalo por defecto
       const room = store.create();
 
-      now += ROOM_TTL_MS;
+      now += ROOM_UNUSED_TTL_MS;
       vi.advanceTimersByTime(60 * 1000);
 
       expect(store.find(room.code)).toBeUndefined();

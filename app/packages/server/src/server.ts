@@ -101,6 +101,7 @@ export function createSyzServer(options: SyzServerOptions = {}): SyzServer {
             return send(ws, { type: 'error', error: 'room_not_found' });
           }
           store.touch(code);
+          store.markJoined(code);
           join(ws, code);
           return send(ws, { type: 'room_joined', code });
         }
@@ -112,10 +113,10 @@ export function createSyzServer(options: SyzServerOptions = {}): SyzServer {
   });
 
   function sweep() {
-    for (const code of store.sweep()) {
+    for (const { code, reason } of store.sweep()) {
       for (const ws of members.get(code) ?? []) {
         roomBySocket.delete(ws);
-        send(ws, { type: 'room_expired' });
+        send(ws, { type: 'room_expired', reason });
       }
       members.delete(code);
     }

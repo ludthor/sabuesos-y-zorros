@@ -16,12 +16,16 @@ Como organizador, quiero crear una sala y obtener un código y un QR para que lo
 - Dado la página de inicio, cuando pulso «Nueva partida», entonces veo un código corto y un QR que lleva a la sala.
 - Dado un código que no existe, cuando alguien lo introduce, entonces ve un aviso y no entra en ninguna sala.
 - Dado una sala sin actividad durante el periodo de caducidad, entonces el servidor la elimina con todo su estado.
+- Dado una sala recién creada, si ningún otro dispositivo entra en 15 minutos, entonces el servidor la cierra y el organizador ve un aviso que explica por qué.
 
 ## Notas
 
 - Es la primera historia de código: crea `app/` siguiendo ADR-0001, ADR-0002 y ADR-0003, con el motor de reglas, el servidor y el cliente como piezas separadas.
 - Añade a `CLAUDE.md` los comandos para instalar, probar y arrancar la app.
 - Caducidad: 4 horas sin actividad (ADR-0006). Confirmada por Ariel el 2026-11-14.
+- Cierre por falta de uso: si ningún otro dispositivo entra en los 15 minutos siguientes a crear la sala, se cierra. Cuando alguien entra, solo cuenta la caducidad de 4 horas. Lo pidió Ariel el 2026-11-16.
+- La actividad que reinicia la caducidad son los mensajes que llegan a la sala, no tener una pantalla abierta.
+- El servidor no distingue dispositivos: si el organizador recarga la página, su nueva conexión cuenta como alguien que entra.
 - El código evita caracteres que se confunden al dictarlo en voz alta (por ejemplo, 0 y O, 1 e I).
 
 ## Para la demo
@@ -35,4 +39,4 @@ Con un portátil y un móvil en la misma wifi. En redes como eduroam los disposi
 5. En el móvil, escribir un código inventado, por ejemplo `ZZZZZ`. Aparece el aviso «No hay ninguna sala con el código ZZZZZ» y no entra.
 6. Parar el servidor (Ctrl+C) con la sala abierta en el móvil. Aparece el aviso de conexión perdida. Al arrancarlo de nuevo y recargar, la sala ya no existe, porque las salas viven en memoria.
 
-La caducidad de 4 horas no se prueba a mano: la cubren las pruebas automáticas.
+La caducidad de 4 horas no se prueba a mano: la cubren las pruebas automáticas. El cierre a los 15 minutos sí se puede ver: basta con crear una sala, no unir ningún otro dispositivo y esperar. El aviso aparece entre el minuto 15 y el 16.

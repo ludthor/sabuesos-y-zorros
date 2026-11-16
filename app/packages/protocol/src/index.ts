@@ -11,6 +11,12 @@ export const ROOM_CODE_LENGTH = 5;
 /** Una sala se elimina tras 4 horas sin actividad (ADR-0006, confirmado en C0-01). */
 export const ROOM_TTL_MS = 4 * 60 * 60 * 1000;
 
+/** Una sala a la que no se une ningún otro dispositivo se cierra a los 15 minutos (Ariel, 2026-11-16). */
+export const ROOM_UNUSED_TTL_MS = 15 * 60 * 1000;
+
+/** Por qué se cerró una sala: nadie se unió a tiempo, o pasó la caducidad sin actividad. */
+export type ExpiryReason = 'unused' | 'inactive';
+
 const ROOM_CODE_RE = new RegExp(`^[${ROOM_CODE_ALPHABET}]{${ROOM_CODE_LENGTH}}$`);
 
 /** Pasa a mayúsculas y quita espacios y guiones, para aceptar lo que se teclee. */
@@ -42,7 +48,7 @@ export type ServerMessage =
   | { type: 'welcome'; shareOrigin: string | null }
   | { type: 'room_created'; code: string }
   | { type: 'room_joined'; code: string }
-  | { type: 'room_expired' }
+  | { type: 'room_expired'; reason: ExpiryReason }
   | { type: 'error'; error: ErrorCode };
 
 /** Valida un mensaje recibido por la red; devuelve null si no es válido. */

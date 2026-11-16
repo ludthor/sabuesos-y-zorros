@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ROOM_CODE_ALPHABET, isRoomCode } from '@syz/protocol';
-import { ROOM_TTL_MS, RoomStore } from '../src/rooms.ts';
+import { ROOM_TTL_MS, ROOM_UNUSED_TTL_MS, RoomStore } from '../src/rooms.ts';
 
 function clock(start = 0) {
   let t = start;
@@ -35,17 +35,57 @@ describe('RoomStore', () => {
     expect(ROOM_TTL_MS).toBe(4 * 60 * 60 * 1000);
   });
 
+  it('una sala sin nadie más tiene 15 minutos para que alguien se una', () => {
+    expect(ROOM_UNUSED_TTL_MS).toBe(15 * 60 * 1000);
+  });
+
+  it('elimina la sala a la que nadie se une en 15 minutos', () => {
+    const c = clock();
+    const store = new RoomStore({ now: c.now });
+    const room = store.create();
+
+    c.advance(ROOM_UNUSED_TTL_MS - 1);
+    expect(store.sweep()).toEqual([]);
+    expect(store.find(room.code)).toBe(room);
+
+    c.advance(1);
+    expect(store.sweep()).toEqual([{ code: room.code, reason: 'unused' }]);
+    expect(store.find(room.code)).toBeUndefined();
+  });
+
+  it('la actividad del organizador solo no evita el cierre a los 15 minutos', () => {
+    const c = clock();
+    const store = new RoomStore({ now: c.now });
+    const room = store.create();
+    c.advance(ROOM_UNUSED_TTL_MS - 1000);
+    store.touch(room.code);
+    c.advance(1000);
+    expect(store.sweep()).toEqual([{ code: room.code, reason: 'unused' }]);
+  });
+
+  it('cuando alguien se une, la sala ya no se cierra a los 15 minutos', () => {
+    const c = clock();
+    const store = new RoomStore({ now: c.now });
+    const room = store.create();
+    c.advance(ROOM_UNUSED_TTL_MS - 1);
+    store.markJoined(room.code);
+    c.advance(ROOM_UNUSED_TTL_MS * 4);
+    expect(store.sweep()).toEqual([]);
+    expect(store.find(room.code)).toBe(room);
+  });
+
   it('elimina con todo su estado la sala sin actividad durante la caducidad', () => {
     const c = clock();
     const store = new RoomStore({ now: c.now });
     const room = store.create();
+    store.markJoined(room.code);
 
     c.advance(ROOM_TTL_MS - 1);
     expect(store.sweep()).toEqual([]);
     expect(store.find(room.code)).toBe(room);
 
     c.advance(1);
-    expect(store.sweep()).toEqual([room.code]);
+    expect(store.sweep()).toEqual([{ code: room.code, reason: 'inactive' }]);
     expect(store.find(room.code)).toBeUndefined();
     expect(store.size).toBe(0);
   });
@@ -54,6 +94,7 @@ describe('RoomStore', () => {
     const c = clock();
     const store = new RoomStore({ now: c.now });
     const room = store.create();
+    store.markJoined(room.code);
 
     c.advance(ROOM_TTL_MS - 1000);
     store.touch(room.code);
@@ -66,10 +107,12 @@ describe('RoomStore', () => {
     const c = clock();
     const store = new RoomStore({ now: c.now });
     const old = store.create();
+    store.markJoined(old.code);
     c.advance(ROOM_TTL_MS / 2);
     const recent = store.create();
+    store.markJoined(recent.code);
     c.advance(ROOM_TTL_MS / 2);
-    expect(store.sweep()).toEqual([old.code]);
+    expect(store.sweep()).toEqual([{ code: old.code, reason: 'inactive' }]);
     expect(store.find(recent.code)).toBeDefined();
   });
 });

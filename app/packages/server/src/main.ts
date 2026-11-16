@@ -45,7 +45,16 @@ if (production) {
   handleHttp = (req, res) => vite.middlewares(req, res);
 }
 
-await server.listen(port, host);
+try {
+  await server.listen(port, host);
+} catch (error) {
+  if ((error as NodeJS.ErrnoException).code !== 'EADDRINUSE') throw error;
+  console.error(
+    `El puerto ${port} ya está en uso: puede que la app ya esté abierta en http://localhost:${port}.\n` +
+      `Ciérrala o arranca en otro puerto, por ejemplo: PORT=${port + 1} npm run dev`,
+  );
+  process.exit(1);
+}
 
 console.log(`Sabuesos y Zorros${production ? '' : ' (desarrollo)'} en http://localhost:${port}`);
 for (const origin of lanOrigins) console.log(`  en la red local: ${origin}`);

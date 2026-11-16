@@ -1,13 +1,22 @@
 import { randomInt as cryptoRandomInt } from 'node:crypto';
 import { createGame, type GameState } from '@syz/engine';
-import { ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH, ROOM_TTL_MS } from '@syz/protocol';
+import {
+  ROOM_CODE_ALPHABET,
+  ROOM_CODE_LENGTH,
+  ROOM_TTL_MS,
+  ROOM_UNUSED_TTL_MS,
+  type ExpiryReason,
+} from '@syz/protocol';
 
-export { ROOM_TTL_MS };
+export { ROOM_TTL_MS, ROOM_UNUSED_TTL_MS };
 
 export interface Room {
   code: string;
   game: GameState;
+  createdAt: number;
   lastActivity: number;
+  /** Si algún dispositivo, además del que la creó, ha entrado en la sala. */
+  joined: boolean;
 }
 
 export interface RoomStoreOptions {
@@ -15,6 +24,7 @@ export interface RoomStoreOptions {
   /** Entero aleatorio en [0, max). Por defecto, criptográfico. */
   randomInt?: (max: number) => number;
   ttlMs?: number;
+  unusedTtlMs?: number;
 }
 
 /** Salas en memoria. No guarda nada fuera de la partida (ADR-0006). */
@@ -23,11 +33,13 @@ export class RoomStore {
   private readonly now: () => number;
   private readonly randomInt: (max: number) => number;
   private readonly ttlMs: number;
+  private readonly unusedTtlMs: number;
 
   constructor(options: RoomStoreOptions = {}) {
     this.now = options.now ?? Date.now;
     this.randomInt = options.randomInt ?? ((max) => cryptoRandomInt(max));
     this.ttlMs = options.ttlMs ?? ROOM_TTL_MS;
+    this.unusedTtlMs = options.unusedTtlMs ?? ROOM_UNUSED_TTL_MS;
   }
 
   get size(): number {
@@ -38,7 +50,8 @@ export class RoomStore {
     let code: string;
     do code = this.generateCode();
     while (this.rooms.has(code));
-    const room: Room = { code, game: createGame(), lastActivity: this.now() };
+    const now = this.now();
+    const room: Room = { code, game: createGame(), createdAt: now, lastActivity: now, joined: false };
     this.rooms.set(code, room);
     return room;
   }
@@ -52,14 +65,26 @@ export class RoomStore {
     if (room) room.lastActivity = this.now();
   }
 
-  /** Elimina las salas caducadas y devuelve sus códigos. */
-  sweep(): string[] {
-    const limit = this.now() - this.ttlMs;
-    const expired: string[] = [];
+  /** Anota que otro dispositivo ha entrado: desde ahí solo cuenta la caducidad por inactividad. */
+  markJoined(code: string): void {
+    const room = this.rooms.get(code);
+    if (room) room.joined = true;
+  }
+
+  /** Elimina las salas que deben cerrarse y devuelve sus códigos con el motivo. */
+  sweep(): Array<{ code: string; reason: ExpiryReason }> {
+    const now = this.now();
+    const expired: Array<{ code: string; reason: ExpiryReason }> = [];
     for (const [code, room] of this.rooms) {
-      if (room.lastActivity <= limit) {
+      const reason: ExpiryReason | null =
+        !room.joined && now - room.createdAt >= this.unusedTtlMs
+          ? 'unused'
+          : now - room.lastActivity >= this.ttlMs
+            ? 'inactive'
+            : null;
+      if (reason) {
         this.rooms.delete(code);
-        expired.push(code);
+        expired.push({ code, reason });
       }
     }
     return expired;

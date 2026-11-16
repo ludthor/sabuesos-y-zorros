@@ -3,6 +3,7 @@ import {
   ROOM_CODE_CONFUSABLES,
   ROOM_CODE_LENGTH,
   ROOM_TTL_MS,
+  ROOM_UNUSED_TTL_MS,
   isRoomCode,
   normalizeRoomCode,
   parseRoomPath,
@@ -17,9 +18,11 @@ function listWithNi(items: readonly string[]): string {
 }
 
 const TTL_HOURS = ROOM_TTL_MS / (60 * 60 * 1000);
+const UNUSED_MINUTES = ROOM_UNUSED_TTL_MS / (60 * 1000);
 export const NOTICES = {
   badShape: `Un código de sala tiene ${ROOM_CODE_LENGTH} caracteres, sin ${listWithNi(ROOM_CODE_CONFUSABLES)}.`,
   expired: `La sala ha caducado tras ${TTL_HOURS} horas sin actividad.`,
+  unused: `La sala se ha cerrado porque nadie se unió en ${UNUSED_MINUTES} minutos.`,
   notFound: (code: string) => `No hay ninguna sala con el código ${code}. Conviene revisarlo.`,
   lost: 'Se ha perdido la conexión con el servidor. Hay que recargar la página.',
   failed: 'Algo ha fallado. Hay que volver a intentarlo.',
@@ -62,7 +65,7 @@ export function App({ connection }: { connection: Connection }) {
           return setView({ name: 'room', code: msg.code });
         case 'room_expired':
           backHome();
-          return setView({ name: 'home', notice: NOTICES.expired });
+          return setView({ name: 'home', notice: msg.reason === 'unused' ? NOTICES.unused : NOTICES.expired });
         case 'error':
           backHome();
           return setView({
