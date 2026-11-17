@@ -171,8 +171,8 @@ Cada territorio ocupa unos 6 minutos. Es una estimación que hay que comprobar e
 | Tiempo de preguntas | Territorios en juego |
 | --- | --- |
 | Hasta 20 minutos | 3 |
-| De 20 a 30 minutos | 4 |
-| De 30 a 40 minutos | 5 |
+| Más de 20 y hasta 30 minutos | 4 |
+| Más de 30 y hasta 40 minutos | 5 |
 | Más de 40 minutos | 6 |
 
 **Mazos según la configuración**

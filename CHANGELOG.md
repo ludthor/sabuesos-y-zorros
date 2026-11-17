@@ -12,6 +12,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). L
 ### Cambiado
 
 - Reglamento §4.3: las preguntas que no cuentan para ningún bando también suman al límite de cinco preguntas por territorio.
+- Reglamento §7: los tramos de la tabla de territorios ya no se solapan. Con justo 20, 30 o 40 minutos se juegan 3, 4 o 5 territorios.
 - La licencia MIT cubre también el código de la versión digital (`app/`).
 
 ## [0.2.0-beta] — 2026-11-13

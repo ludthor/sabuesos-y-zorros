@@ -402,3 +402,150 @@ body {
   flex-direction: column;
   gap: 16px;
 }
+
+/* Preparación de la partida (C0-02) */
+.status {
+  margin: 0;
+  padding: 12px 14px;
+  border: 2px dashed var(--ink);
+  border-radius: var(--radius);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.setup,
+.opening {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.setup__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.setup__field > label[for],
+.setup__field > span,
+.setup__field > legend {
+  padding: 0;
+  font-weight: 600;
+}
+.setup__minutes {
+  letter-spacing: 0;
+  text-transform: none;
+}
+.setup__hint {
+  margin: 0;
+  color: var(--note);
+  line-height: 1.35;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border: var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--paper);
+}
+.segmented__option {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 52px;
+  font-weight: 800;
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+.segmented__option + .segmented__option {
+  border-left: var(--border);
+}
+.segmented__option input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+.segmented__option.is-checked {
+  background: var(--hounds);
+  color: var(--cream);
+}
+.segmented__option:has(input:focus-visible) {
+  outline: 3px solid var(--hounds);
+  outline-offset: -6px;
+}
+
+.picks {
+  gap: 10px;
+}
+.picks__count {
+  font-weight: 400;
+  color: var(--note);
+}
+.pick {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: var(--paper);
+  cursor: pointer;
+}
+.pick.is-checked {
+  background: var(--territory);
+}
+.pick input {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: 2px 0 0;
+  accent-color: var(--ink);
+}
+.pick strong {
+  display: block;
+  font-weight: 800;
+}
+.pick__guide {
+  display: block;
+  margin-top: 2px;
+  line-height: 1.35;
+}
+
+.territory--current {
+  box-shadow: 6px 6px 0 var(--ink);
+  outline: 4px solid var(--ink);
+  outline-offset: 2px;
+}
+.territory__tag {
+  display: inline-block;
+  margin-bottom: 6px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--cream);
+  font-weight: 800;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.territory--choice {
+  font: inherit;
+  color: var(--ink);
+  text-align: left;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: transform 80ms ease, box-shadow 80ms ease;
+}
+.territory--choice:active {
+  transform: translate(3px, 3px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.territory--choice:focus-visible {
+  outline: 3px solid var(--foxes);
+  outline-offset: 3px;
+}

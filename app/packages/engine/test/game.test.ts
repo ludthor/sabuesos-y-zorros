@@ -10,10 +10,13 @@ describe('createGame', () => {
   it('empieza una partida en preparación con los territorios en juego y ninguno ganado (§3.4, §4.3)', () => {
     expect(createGame(TERRITORIES)).toEqual({
       phase: 'setup',
+      catalog: TERRITORIES,
+      territoryCount: 2,
       territories: [
         { ...TERRITORIES[0], owner: null },
         { ...TERRITORIES[1], owner: null },
       ],
+      current: null,
     });
   });
 
@@ -28,7 +31,10 @@ describe('boardFor (ADR-0001)', () => {
     for (const side of ['foxes', 'hounds'] as const) {
       expect(boardFor(game, side)).toEqual({
         phase: 'setup',
+        catalog: TERRITORIES,
+        territoryCount: 2,
         territories: game.territories,
+        current: null,
         score: { foxes: 0, hounds: 0 },
       });
     }

@@ -1,7 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { WebSocketServer, type WebSocket } from 'ws';
-import { boardFor, canChangeSide, type Side } from '@syz/engine';
+import { applyAction, boardFor, canChangeSide, type Side } from '@syz/engine';
 import {
   isRoomCode,
   normalizeRoomCode,
@@ -144,6 +144,17 @@ export function createSyzServer(options: SyzServerOptions = {}): SyzServer {
             return send(ws, { type: 'error', error: 'side_locked' });
           }
           current.side = msg.side;
+          return broadcastState(current.code);
+        }
+        case 'game_action': {
+          const room = current && store.find(current.code);
+          if (!current || !room) return send(ws, { type: 'error', error: 'not_in_room' });
+          if (!current.side) return send(ws, { type: 'action_rejected', reason: 'not_allowed' });
+          const result = applyAction(room.game, current.side, msg.action, {
+            foxesPresent: deviceCount(current.code).foxes > 0,
+          });
+          if (!result.ok) return send(ws, { type: 'action_rejected', reason: result.error });
+          room.game = result.state;
           return broadcastState(current.code);
         }
       }
