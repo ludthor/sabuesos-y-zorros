@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import WebSocket from 'ws';
+import type { GameAction } from '@syz/engine';
 import { isRoomCode, type ClientMessage, type ServerMessage } from '@syz/protocol';
 import { ROOM_TTL_MS, ROOM_UNUSED_TTL_MS, RoomStore } from '../src/rooms.ts';
 import { createSyzServer, type SyzServer } from '../src/server.ts';
@@ -287,7 +288,14 @@ describe('bandos (C0-03)', () => {
     other.send({ type: 'choose_side', side: 'hounds' });
     const state = await other.until('room_state');
     expect(Object.keys(state).sort()).toEqual(['board', 'devices', 'side', 'type']);
-    expect(Object.keys(state.board!).sort()).toEqual(['phase', 'score', 'territories']);
+    expect(Object.keys(state.board!).sort()).toEqual([
+      'catalog',
+      'current',
+      'phase',
+      'score',
+      'territories',
+      'territoryCount',
+    ]);
   });
 
   it('elegir bando fuera de una sala, o un bando que no existe, recibe un error', async () => {
@@ -297,5 +305,85 @@ describe('bandos (C0-03)', () => {
     expect(await c.next()).toEqual({ type: 'error', error: 'not_in_room' });
     c.send({ type: 'choose_side', side: 'wolves' });
     expect(await c.next()).toEqual({ type: 'error', error: 'bad_message' });
+  });
+});
+
+describe('preparación de la partida (C0-02)', () => {
+  /** Sala con un dispositivo de los sabuesos y, si se pide, otro de los zorros. */
+  async function setupRoom({ withFoxes = true } = {}) {
+    const { url } = await start();
+    const hounds = await client(url);
+    hounds.send({ type: 'create_room' });
+    const { code } = await hounds.until('room_created');
+    hounds.send({ type: 'choose_side', side: 'hounds' });
+    await hounds.until('room_state');
+    await hounds.until('room_state');
+    const foxes = await client(url);
+    foxes.send({ type: 'join_room', code });
+    await foxes.until('room_state');
+    if (withFoxes) {
+      foxes.send({ type: 'choose_side', side: 'foxes' });
+      await foxes.until('room_state');
+      await hounds.until('room_state');
+    }
+    return { hounds, foxes };
+  }
+
+  const act = (action: GameAction) => ({ type: 'game_action', action }) as const;
+
+  it('lo que elige el tribunal llega a todos los dispositivos', async () => {
+    const { hounds, foxes } = await setupRoom();
+    hounds.send(act({ type: 'set_territory_count', count: 4 }));
+    expect((await foxes.until('room_state')).board?.territoryCount).toBe(4);
+    hounds.send(act({ type: 'set_territory', id: 'T02', inPlay: false }));
+    const seen = await foxes.until('room_state');
+    expect(seen.board?.territories.map((t) => t.id)).toEqual(['T01', 'T03', 'T04', 'T05', 'T06']);
+  });
+
+  it('los zorros no pueden cambiar la configuración', async () => {
+    const { foxes } = await setupRoom();
+    foxes.send(act({ type: 'set_territory_count', count: 3 }));
+    expect(await foxes.next()).toEqual({ type: 'action_rejected', reason: 'not_allowed' });
+  });
+
+  it('sin ningún dispositivo de los zorros, la partida no empieza', async () => {
+    const { hounds } = await setupRoom({ withFoxes: false });
+    hounds.send(act({ type: 'start_game' }));
+    expect(await hounds.until('action_rejected')).toEqual({ type: 'action_rejected', reason: 'foxes_missing' });
+  });
+
+  it('al empezar, los zorros eligen el primer territorio y todos lo ven en disputa', async () => {
+    const { hounds, foxes } = await setupRoom();
+    hounds.send(act({ type: 'set_territory_count', count: 3 }));
+    for (const id of ['T02', 'T04', 'T06']) hounds.send(act({ type: 'set_territory', id, inPlay: false }));
+    hounds.send(act({ type: 'start_game' }));
+    let seen;
+    do seen = await foxes.until('room_state');
+    while (seen.board?.phase !== 'opening');
+    expect(seen.board.territories.map((t) => t.id)).toEqual(['T01', 'T03', 'T05']);
+
+    foxes.send(act({ type: 'choose_first_territory', id: 'T05' }));
+    do seen = await hounds.until('room_state');
+    while (seen.board?.phase !== 'playing');
+    expect(seen.board.current).toBe('T05');
+  });
+
+  it('empezada la partida, cambiar de bando se rechaza sin sacar al dispositivo de la sala', async () => {
+    const { hounds, foxes } = await setupRoom();
+    hounds.send(act({ type: 'set_territory_count', count: 6 }));
+    hounds.send(act({ type: 'start_game' }));
+    let seen;
+    do seen = await foxes.until('room_state');
+    while (seen.board?.phase !== 'opening');
+
+    foxes.send({ type: 'choose_side', side: 'hounds' });
+    expect(await foxes.next()).toEqual({ type: 'error', error: 'side_locked' });
+    expect(server!.joinedCount()).toBe(2);
+  });
+
+  it('una acción con forma incorrecta recibe un error', async () => {
+    const { hounds } = await setupRoom();
+    hounds.send({ type: 'game_action', action: { type: 'set_territory_count', count: 'cuatro' } });
+    expect(await hounds.next()).toEqual({ type: 'error', error: 'bad_message' });
   });
 });

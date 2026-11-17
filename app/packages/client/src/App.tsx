@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { canChangeSide, type Side } from '@syz/engine';
+import {
+  MAX_TERRITORIES,
+  MIN_TERRITORIES,
+  canChangeSide,
+  suggestedTerritoryCount,
+  type BoardView,
+  type GameAction,
+  type RuleError,
+  type Side,
+} from '@syz/engine';
 import {
   ROOM_CODE_CONFUSABLES,
   ROOM_CODE_LENGTH,
@@ -41,6 +50,14 @@ export const NOTICES = {
   notFound: (code: string) => `No hay ninguna sala con el código ${code}. Conviene revisarlo.`,
   lost: 'Se ha perdido la conexión con el servidor. Hay que recargar la página.',
   failed: 'Algo ha fallado. Hay que volver a intentarlo.',
+  rejected: {
+    not_allowed: 'Eso no le corresponde a este bando.',
+    wrong_phase: 'Eso ya no se puede hacer en este momento de la partida.',
+    invalid_count: `Se juegan entre ${MIN_TERRITORIES} y ${MAX_TERRITORIES} territorios.`,
+    unknown_territory: 'Ese territorio no está en juego.',
+    count_mismatch: 'El número de territorios marcados no coincide con el número elegido.',
+    foxes_missing: 'Para empezar, tiene que haber en la sala al menos un dispositivo de los zorros.',
+  } satisfies Record<RuleError, string>,
 };
 
 function isLoopback(hostname: string): boolean {
@@ -50,7 +67,7 @@ function isLoopback(hostname: string): boolean {
 type View =
   | { name: 'home'; notice?: string }
   | { name: 'waiting' }
-  | { name: 'room'; code: string; state?: RoomState };
+  | { name: 'room'; code: string; state?: RoomState; notice?: string };
 
 function goTo(path: string) {
   if (window.location.pathname !== path) window.history.pushState(null, '', path);
@@ -79,7 +96,9 @@ export function App({ connection }: { connection: Connection }) {
           goTo(roomPath(msg.code));
           return setView({ name: 'room', code: msg.code });
         case 'room_state':
-          return setView((v) => (v.name === 'room' ? { ...v, state: msg } : v));
+          return setView((v) => (v.name === 'room' ? { ...v, state: msg, notice: undefined } : v));
+        case 'action_rejected':
+          return setView((v) => (v.name === 'room' ? { ...v, notice: NOTICES.rejected[msg.reason] } : v));
         case 'room_expired':
           backHome();
           return setView({ name: 'home', notice: msg.reason === 'unused' ? NOTICES.unused : NOTICES.expired });
@@ -125,10 +144,21 @@ export function App({ connection }: { connection: Connection }) {
     connection.send({ type: 'choose_side', side });
   }
 
+  function act(action: GameAction) {
+    connection.send({ type: 'game_action', action });
+  }
+
   return (
     <main className="page">
       {view.name === 'room' && view.state?.side && view.state.board ? (
-        <BoardScreen code={view.code} shareOrigin={shareOrigin} state={view.state} onChooseSide={chooseSide} />
+        <BoardScreen
+          code={view.code}
+          shareOrigin={shareOrigin}
+          state={view.state}
+          notice={view.notice}
+          onChooseSide={chooseSide}
+          onAction={act}
+        />
       ) : view.name === 'room' ? (
         <RoomScreen code={view.code} shareOrigin={shareOrigin} onChooseSide={chooseSide} />
       ) : (
@@ -204,7 +234,7 @@ function HomeScreen(props: {
 }
 
 /** Código, QR y dirección para que entren los demás dispositivos. */
-function Invite({ code, shareOrigin }: { code: string; shareOrigin: string | null }) {
+function Invite({ code, shareOrigin, announce = true }: { code: string; shareOrigin: string | null; announce?: boolean }) {
   // Abierta en localhost, la dirección propia no sirve a un móvil: se usa la que da el servidor.
   const local = isLoopback(window.location.hostname);
   const origin = local && shareOrigin ? shareOrigin : window.location.origin;
@@ -221,7 +251,7 @@ function Invite({ code, shareOrigin }: { code: string; shareOrigin: string | nul
         <strong>{origin.replace(/^[a-z]+:\/\//i, '')}</strong>.
       </p>
       {local && !shareOrigin && (
-        <p className="notice" role="alert">
+        <p className="notice" role={announce ? 'alert' : undefined}>
           Este QR lleva a este ordenador y no funcionará en un móvil. Hay que abrir la app con la
           dirección de la red local.
         </p>
@@ -258,10 +288,13 @@ function BoardScreen(props: {
   code: string;
   shareOrigin: string | null;
   state: RoomState;
+  notice?: string;
   onChooseSide: (side: Side) => void;
+  onAction: (action: GameAction) => void;
 }) {
   const side = props.state.side!;
   const board = props.state.board!;
+  const devices = props.state.devices;
   return (
     <section className="board">
       <header className="board__header">
@@ -274,6 +307,12 @@ function BoardScreen(props: {
         </p>
       </header>
 
+      {props.notice && (
+        <p className="notice" role="alert">
+          {props.notice}
+        </p>
+      )}
+
       <h2 id="score-title">Marcador</h2>
       <div className="score" role="group" aria-labelledby="score-title">
         {SIDE_ORDER.map((s) => (
@@ -284,27 +323,29 @@ function BoardScreen(props: {
               {board.score[s]}
             </p>
             <p className="score__devices" data-testid={`devices-${s}`}>
-              {devicesLabel(props.state.devices[s])}
+              {devicesLabel(devices[s])}
             </p>
           </div>
         ))}
       </div>
 
-      <h2 id="territories-title">Territorios en juego</h2>
-      <ol className="territories" aria-label="Territorios en juego">
-        {board.territories.map((t) => (
-          <li key={t.id} className="territory">
-            <h3>{t.name}</h3>
-            <p>{t.guide}</p>
-            {t.owner && (
-              <span className="territory__owner">
-                <Animal side={t.owner} />
-                Lo ganan {SIDE_WITH_ARTICLE[t.owner]}
-              </span>
-            )}
-          </li>
-        ))}
-      </ol>
+      {board.phase === 'setup' && side === 'hounds' ? (
+        <SetupPanel board={board} foxesHere={devices.foxes > 0} onAction={props.onAction} />
+      ) : board.phase === 'opening' && side === 'foxes' ? (
+        <FirstTerritoryPicker board={board} onAction={props.onAction} />
+      ) : (
+        <>
+          {board.phase === 'setup' && (
+            <p className="status">
+              Los sabuesos preparan la partida: eligen cuántos territorios se juegan y cuáles.
+            </p>
+          )}
+          {board.phase === 'opening' && (
+            <p className="status">Los zorros eligen por qué territorio se empieza.</p>
+          )}
+          <TerritoryList board={board} />
+        </>
+      )}
 
       {canChangeSide(board) && (
         <button className="button" onClick={() => props.onChooseSide(OTHER[side])}>
@@ -315,9 +356,167 @@ function BoardScreen(props: {
       <details className="invite">
         <summary>Invitar a otro dispositivo</summary>
         <div className="invite__body">
-          <Invite code={props.code} shareOrigin={props.shareOrigin} />
+          {/* Plegado, el aviso del QR no debe interrumpir: se lee al abrirlo. */}
+          <Invite code={props.code} shareOrigin={props.shareOrigin} announce={false} />
         </div>
       </details>
+    </section>
+  );
+}
+
+function TerritoryList({ board }: { board: BoardView }) {
+  return (
+    <>
+      <h2 id="territories-title">Territorios en juego</h2>
+      <ol className="territories" aria-label="Territorios en juego">
+        {board.territories.map((t) => {
+          const current = t.id === board.current;
+          return (
+            <li
+              key={t.id}
+              className={`territory${current ? ' territory--current' : ''}`}
+              aria-current={current ? 'true' : undefined}
+            >
+              {current && <span className="territory__tag">En disputa</span>}
+              <h3>{t.name}</h3>
+              <p>{t.guide}</p>
+              {t.owner && (
+                <span className="territory__owner">
+                  <Animal side={t.owner} />
+                  Lo ganan {SIDE_WITH_ARTICLE[t.owner]}
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </>
+  );
+}
+
+/** El tribunal elige cuántos territorios se juegan y cuáles (§3.4, §7). */
+function SetupPanel(props: { board: BoardView; foxesHere: boolean; onAction: (action: GameAction) => void }) {
+  const { board, onAction } = props;
+  const [minutes, setMinutes] = useState('');
+  const minutesValue = Number(minutes);
+  const suggestion = minutes !== '' && minutesValue > 0 ? suggestedTerritoryCount(minutesValue) : null;
+  const marked = board.territories.length;
+  const inPlay = new Set(board.territories.map((t) => t.id));
+  const blocker =
+    marked !== board.territoryCount
+      ? `Hay que marcar ${board.territoryCount} territorios; ahora hay ${marked} marcados.`
+      : !props.foxesHere
+        ? 'Falta que entre en la sala algún dispositivo de los zorros: son ellos quienes eligen el primer territorio.'
+        : null;
+
+  function changeMinutes(value: string) {
+    setMinutes(value);
+    const n = Number(value);
+    if (value === '' || !(n > 0)) return;
+    const count = suggestedTerritoryCount(n);
+    if (count !== board.territoryCount) onAction({ type: 'set_territory_count', count });
+  }
+
+  const counts = Array.from({ length: MAX_TERRITORIES - MIN_TERRITORIES + 1 }, (_, i) => MIN_TERRITORIES + i);
+
+  return (
+    <section className="setup" aria-labelledby="setup-title">
+      <h2 id="setup-title">Preparar la partida</h2>
+
+      <div className="setup__field">
+        <label htmlFor="minutes">Tiempo de preguntas (minutos)</label>
+        <input
+          id="minutes"
+          className="join__input setup__minutes"
+          type="number"
+          inputMode="numeric"
+          min={1}
+          value={minutes}
+          onChange={(e) => changeMinutes(e.target.value)}
+          placeholder="30"
+        />
+        {suggestion !== null && (
+          <p className="setup__hint">
+            Para {minutesValue} minutos se sugieren {suggestion} territorios.
+          </p>
+        )}
+      </div>
+
+      <div className="setup__field">
+        <span id="count-label">Número de territorios</span>
+        <div className="segmented" role="radiogroup" aria-labelledby="count-label">
+          {counts.map((n) => (
+            <label key={n} className={`segmented__option${n === board.territoryCount ? ' is-checked' : ''}`}>
+              <input
+                type="radio"
+                name="territory-count"
+                value={n}
+                checked={n === board.territoryCount}
+                onChange={() => onAction({ type: 'set_territory_count', count: n })}
+              />
+              {n}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <fieldset className="setup__field picks">
+        <legend>
+          Territorios en juego{' '}
+          <span className="picks__count">
+            ({marked} de {board.territoryCount})
+          </span>
+        </legend>
+        {board.catalog.map((t) => (
+          <label key={t.id} className={`pick${inPlay.has(t.id) ? ' is-checked' : ''}`}>
+            <input
+              type="checkbox"
+              checked={inPlay.has(t.id)}
+              onChange={(e) => onAction({ type: 'set_territory', id: t.id, inPlay: e.target.checked })}
+            />
+            <span>
+              <strong>{t.name}</strong>
+              <span className="pick__guide">{t.guide}</span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+
+      {blocker && (
+        <p className="setup__hint" id="start-blocker">
+          {blocker}
+        </p>
+      )}
+      <button
+        className="button button--primary"
+        disabled={blocker !== null}
+        aria-describedby={blocker ? 'start-blocker' : undefined}
+        onClick={() => onAction({ type: 'start_game' })}
+      >
+        Empezar la partida
+      </button>
+    </section>
+  );
+}
+
+/** Los zorros eligen por qué territorio se empieza (§3.4). */
+function FirstTerritoryPicker({ board, onAction }: { board: BoardView; onAction: (action: GameAction) => void }) {
+  return (
+    <section className="opening" aria-labelledby="opening-title">
+      <h2 id="opening-title">¿Por qué territorio se empieza?</h2>
+      <p className="status">Los zorros eligen el primer territorio en disputa.</p>
+      <div className="territories">
+        {board.territories.map((t) => (
+          <button
+            key={t.id}
+            className="territory territory--choice"
+            onClick={() => onAction({ type: 'choose_first_territory', id: t.id })}
+          >
+            <h3>{t.name}</h3>
+            <p>{t.guide}</p>
+          </button>
+        ))}
+      </div>
     </section>
   );
 }

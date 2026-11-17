@@ -168,12 +168,21 @@ describe('página de inicio (C0-01)', () => {
   });
 });
 
+const CATALOG = [
+  { id: 'T01', name: 'Pregunta y objetivos', guide: '¿Qué problema aborda el proyecto y qué quiere conseguir?' },
+  { id: 'T02', name: 'Antecedentes', guide: '¿Qué se sabía antes y en qué se apoya?' },
+  { id: 'T03', name: 'Método', guide: '¿Cómo se hizo y por qué así?' },
+];
+
 const BOARD: BoardView = {
   phase: 'setup',
+  catalog: CATALOG,
+  territoryCount: 2,
   territories: [
-    { id: 'T01', name: 'Pregunta y objetivos', guide: '¿Qué problema aborda el proyecto y qué quiere conseguir?', owner: null },
-    { id: 'T03', name: 'Método', guide: '¿Cómo se hizo y por qué así?', owner: null },
+    { ...CATALOG[0]!, owner: null },
+    { ...CATALOG[2]!, owner: null },
   ],
+  current: null,
   score: { foxes: 0, hounds: 0 },
 };
 
@@ -245,5 +254,93 @@ describe('bandos (C0-03)', () => {
     });
     expect(screen.getByTestId('score-foxes').textContent).toBe('1');
     expect(screen.getByTestId('devices-hounds').textContent).toBe('1 dispositivo');
+  });
+});
+
+describe('preparación de la partida (C0-02)', () => {
+  async function asSide(side: 'hounds' | 'foxes', board: BoardView = BOARD, devices = { foxes: 1, hounds: 1 }) {
+    const fake = fakeConnection();
+    render(<App connection={fake.connection} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Nueva partida' }));
+    await fake.reply({ type: 'room_created', code: 'K7MPX' });
+    await fake.reply({ type: 'room_state', side, board, devices });
+    fake.sent.length = 0;
+    return fake;
+  }
+
+  it('el tiempo de preguntas sugiere el número de territorios del §7', async () => {
+    const { sent } = await asSide('hounds');
+    fireEvent.change(screen.getByLabelText('Tiempo de preguntas (minutos)'), { target: { value: '25' } });
+    expect(screen.getByText(/se sugieren 4 territorios/)).toBeDefined();
+    expect(sent).toEqual([{ type: 'game_action', action: { type: 'set_territory_count', count: 4 } }]);
+  });
+
+  it('el número se puede cambiar entre 3 y 6', async () => {
+    const { sent } = await asSide('hounds');
+    const group = screen.getByRole('radiogroup', { name: 'Número de territorios' });
+    expect(within(group).getAllByRole('radio').map((r) => r.getAttribute('value'))).toEqual(['3', '4', '5', '6']);
+    fireEvent.click(within(group).getByRole('radio', { name: '5' }));
+    expect(sent).toEqual([{ type: 'game_action', action: { type: 'set_territory_count', count: 5 } }]);
+  });
+
+  it('se marcan los territorios de entre los del §6.4', async () => {
+    const { sent } = await asSide('hounds');
+    const boxes = screen.getAllByRole('checkbox');
+    expect(boxes).toHaveLength(3);
+    expect((screen.getByRole('checkbox', { name: /Método/ }) as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByRole('checkbox', { name: /Antecedentes/ }) as HTMLInputElement).checked).toBe(false);
+    fireEvent.click(screen.getByRole('checkbox', { name: /Antecedentes/ }));
+    expect(sent).toEqual([{ type: 'game_action', action: { type: 'set_territory', id: 'T02', inPlay: true } }]);
+  });
+
+  it('«Empezar la partida» solo se activa con la configuración completa y algún zorro en la sala', async () => {
+    const { reply, sent } = await asSide('hounds', { ...BOARD, territoryCount: 3 });
+    const start = () => screen.getByRole('button', { name: 'Empezar la partida' }) as HTMLButtonElement;
+    expect(start().disabled).toBe(true);
+    expect(screen.getByText(/Hay que marcar 3 territorios/)).toBeDefined();
+
+    await reply({ type: 'room_state', side: 'hounds', board: BOARD, devices: { foxes: 0, hounds: 1 } });
+    expect(start().disabled).toBe(true);
+    expect(screen.getByText(/dispositivo de los zorros/)).toBeDefined();
+
+    await reply({ type: 'room_state', side: 'hounds', board: BOARD, devices: { foxes: 1, hounds: 1 } });
+    expect(start().disabled).toBe(false);
+    fireEvent.click(start());
+    expect(sent).toEqual([{ type: 'game_action', action: { type: 'start_game' } }]);
+  });
+
+  it('los zorros ven la configuración, pero no pueden cambiarla', async () => {
+    await asSide('foxes');
+    expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
+    expect(screen.queryByRole('button', { name: 'Empezar la partida' })).toBeNull();
+    expect(screen.getByText(/Los sabuesos preparan la partida/)).toBeDefined();
+    expect(within(screen.getByRole('list', { name: 'Territorios en juego' })).getAllByRole('listitem')).toHaveLength(2);
+  });
+
+  it('al empezar, los zorros eligen el primer territorio en disputa', async () => {
+    const { sent } = await asSide('foxes', { ...BOARD, phase: 'opening' });
+    fireEvent.click(screen.getByRole('button', { name: /Método/ }));
+    expect(sent).toEqual([{ type: 'game_action', action: { type: 'choose_first_territory', id: 'T03' } }]);
+  });
+
+  it('mientras tanto, los sabuesos ven que eligen los zorros', async () => {
+    await asSide('hounds', { ...BOARD, phase: 'opening' });
+    expect(screen.getByText(/Los zorros eligen por qué territorio se empieza/)).toBeDefined();
+    expect(screen.queryByRole('button', { name: /Método/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Pasar a/ })).toBeNull();
+  });
+
+  it('con la partida en marcha, se ve qué territorio está en disputa', async () => {
+    await asSide('hounds', { ...BOARD, phase: 'playing', current: 'T03' });
+    const current = screen.getByText('Método').closest('li')!;
+    expect(current.getAttribute('aria-current')).toBe('true');
+    expect(within(current).getByText('En disputa')).toBeDefined();
+  });
+
+  it('si el servidor rechaza una acción, se explica sin salir de la sala', async () => {
+    const { reply } = await asSide('hounds');
+    await reply({ type: 'action_rejected', reason: 'foxes_missing' });
+    expect(screen.getByRole('alert').textContent).toBe(NOTICES.rejected.foxes_missing);
+    expect(screen.getByTestId('own-side')).toBeDefined();
   });
 });
