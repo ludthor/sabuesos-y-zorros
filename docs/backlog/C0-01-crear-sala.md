@@ -25,7 +25,7 @@ Como organizador, quiero crear una sala y obtener un código y un QR para que lo
 - Caducidad: 4 horas sin actividad (ADR-0006). Confirmada por Ariel el 2026-11-14.
 - Cierre por falta de uso: si ningún otro dispositivo entra en los 15 minutos siguientes a crear la sala, se cierra. Cuando alguien entra, solo cuenta la caducidad de 4 horas. Lo pidió Ariel el 2026-11-16.
 - La actividad que reinicia la caducidad son los mensajes que llegan a la sala, no tener una pantalla abierta.
-- El servidor no distingue dispositivos: si el organizador recarga la página, su nueva conexión cuenta como alguien que entra.
+- El servidor no distingue dispositivos: si el organizador recarga la página, su nueva conexión cuenta como alguien que entra. Lo mismo si abre la sala en otra pestaña. Ariel lo da por bueno (2026-11-17).
 - El código evita caracteres que se confunden al dictarlo en voz alta (por ejemplo, 0 y O, 1 e I).
 
 ## Para la demo
