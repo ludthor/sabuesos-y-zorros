@@ -2,7 +2,7 @@
 id: C0-03
 titulo: Unirse a un bando
 corte: C0
-estado: en revisión
+estado: hecha
 reglamento: "§1, §3.4, §4.3, §6.4"
 depende_de: [C0-01]
 ---
