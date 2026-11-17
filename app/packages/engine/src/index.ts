@@ -54,6 +54,6 @@ export function boardFor(state: GameState, _side: Side): BoardView {
 }
 
 /** Un dispositivo puede cambiar de bando mientras la partida no ha empezado (Ariel, C0-03). */
-export function canChangeSide(state: GameState): boolean {
+export function canChangeSide(state: Pick<GameState, 'phase'>): boolean {
   return state.phase === 'setup';
 }

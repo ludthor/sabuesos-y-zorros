@@ -51,6 +51,7 @@ describe('boardFor (ADR-0001)', () => {
 describe('canChangeSide', () => {
   it('un dispositivo puede cambiar de bando mientras la partida no ha empezado (Ariel, C0-03)', () => {
     expect(canChangeSide(createGame(TERRITORIES))).toBe(true);
+    expect(canChangeSide(boardFor(createGame(TERRITORIES), 'foxes'))).toBe(true);
   });
 });
 
@@ -67,6 +68,10 @@ describe('parseTerritories', () => {
       { id: 'T01', name: 'Pregunta y objetivos', guide: '¿Qué problema aborda el proyecto y qué quiere conseguir?' },
       { id: 'T05', name: 'Limitaciones', guide: '¿Qué no cubre, y qué podría fallar?' },
     ]);
+  });
+
+  it('avisa con claridad si falta una columna', () => {
+    expect(() => parseTerritories('id,tipo,nombre\nT01,territorio,Método\n')).toThrow(/texto/);
   });
 
   it('acepta finales de línea de Windows', () => {

@@ -43,7 +43,11 @@ function parseCsv(text: string): string[][] {
 export function parseTerritories(csv: string): Territory[] {
   const [header, ...rows] = parseCsv(csv);
   if (!header) return [];
-  const col = (name: string) => header.indexOf(name);
+  const col = (name: string) => {
+    const i = header.indexOf(name);
+    if (i < 0) throw new Error(`Falta la columna «${name}» en cartas.csv`);
+    return i;
+  };
   const [id, type, name, text] = [col('id'), col('tipo'), col('nombre'), col('texto')];
   return rows
     .filter((r) => r[type] === 'territorio')

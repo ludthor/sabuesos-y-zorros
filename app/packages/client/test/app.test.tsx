@@ -226,6 +226,14 @@ describe('bandos (C0-03)', () => {
     expect(sent).toEqual([{ type: 'choose_side', side: 'hounds' }]);
   });
 
+  it('si el servidor no deja cambiar de bando, el dispositivo sigue en la sala con el suyo', async () => {
+    const { reply } = await inRoom();
+    await reply({ type: 'room_state', side: 'foxes', board: BOARD, devices: { foxes: 1, hounds: 0 } });
+    await reply({ type: 'error', error: 'side_locked' });
+    expect(screen.getByTestId('own-side').textContent).toMatch(/Zorros/);
+    expect(window.location.pathname).toBe('/sala/K7MPX');
+  });
+
   it('el marcador cambia cuando llega un estado nuevo', async () => {
     const { reply } = await inRoom();
     await reply({ type: 'room_state', side: 'foxes', board: BOARD, devices: { foxes: 1, hounds: 0 } });

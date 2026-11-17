@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import type { Side } from '@syz/engine';
+import { canChangeSide, type Side } from '@syz/engine';
 import {
   ROOM_CODE_CONFUSABLES,
   ROOM_CODE_LENGTH,
@@ -84,6 +84,8 @@ export function App({ connection }: { connection: Connection }) {
           backHome();
           return setView({ name: 'home', notice: msg.reason === 'unused' ? NOTICES.unused : NOTICES.expired });
         case 'error':
+          // El servidor no saca de la sala a quien intenta cambiar de bando a destiempo.
+          if (msg.error === 'side_locked') return;
           backHome();
           return setView({
             name: 'home',
@@ -304,7 +306,7 @@ function BoardScreen(props: {
         ))}
       </ol>
 
-      {board.phase === 'setup' && (
+      {canChangeSide(board) && (
         <button className="button" onClick={() => props.onChooseSide(OTHER[side])}>
           Pasar a {SIDE_WITH_ARTICLE[OTHER[side]]}
         </button>
