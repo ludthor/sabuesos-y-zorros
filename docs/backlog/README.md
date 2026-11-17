@@ -67,7 +67,7 @@ Hito 1, al cerrar la etapa 1: el árbitro digital ya se usa y mide las partidas 
 | ID | Historia | Estado | Depende de |
 | --- | --- | --- | --- |
 | [C0-01](C0-01-crear-sala.md) | Crear una sala | hecha | — |
-| [C0-02](C0-02-elegir-territorios.md) | Elegir los territorios en juego | lista | C0-01 |
+| [C0-02](C0-02-elegir-territorios.md) | Elegir los territorios en juego | en curso | C0-01 |
 | [C0-03](C0-03-unirse-a-un-bando.md) | Unirse a un bando | hecha | C0-01 |
 | [C0-04](C0-04-anotar-preguntas.md) | Anotar quién gana cada pregunta | lista | C0-02, C0-03 |
 | [C0-05](C0-05-final-de-partida.md) | Final de la partida | lista | C0-04 |
@@ -133,3 +133,4 @@ Ideas sin prioridad, que pueden entrar al backlog tras una partida de prueba:
 | --- | --- | --- |
 | 2026-11-14 | Las preguntas que no cuentan para ningún bando también suman al límite de cinco preguntas por territorio | Reglamento §4.3, C1-02 |
 | 2026-11-14 | Retirar una carta jugada por error es solo una ayuda de la versión digital; no cambia el reglamento | C2-06 |
+| 2026-11-17 | En la tabla de territorios según el tiempo, con justo 20, 30 o 40 minutos se aplica el tramo menor | Reglamento §7, C0-02 |
