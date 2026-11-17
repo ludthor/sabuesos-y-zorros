@@ -6,6 +6,7 @@
     "build": "vite build"
   },
   "dependencies": {
+    "@syz/engine": "*",
     "@syz/protocol": "*",
     "qrcode": "^1.5.4",
     "react": "^19.3.1",

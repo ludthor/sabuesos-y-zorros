@@ -1,5 +1,5 @@
 import { randomInt as cryptoRandomInt } from 'node:crypto';
-import { createGame, type GameState } from '@syz/engine';
+import { createGame, type GameState, type Territory } from '@syz/engine';
 import {
   ROOM_CODE_ALPHABET,
   ROOM_CODE_LENGTH,
@@ -7,6 +7,7 @@ import {
   ROOM_UNUSED_TTL_MS,
   type ExpiryReason,
 } from '@syz/protocol';
+import { loadTerritories } from './cards.ts';
 
 export { ROOM_TTL_MS, ROOM_UNUSED_TTL_MS };
 
@@ -25,6 +26,8 @@ export interface RoomStoreOptions {
   randomInt?: (max: number) => number;
   ttlMs?: number;
   unusedTtlMs?: number;
+  /** Territorios de cada partida nueva. Por defecto, los de cartas/cartas.csv. */
+  territories?: readonly Territory[];
 }
 
 /** Salas en memoria. No guarda nada fuera de la partida (ADR-0006). */
@@ -34,12 +37,14 @@ export class RoomStore {
   private readonly randomInt: (max: number) => number;
   private readonly ttlMs: number;
   private readonly unusedTtlMs: number;
+  private readonly territories: readonly Territory[];
 
   constructor(options: RoomStoreOptions = {}) {
     this.now = options.now ?? Date.now;
     this.randomInt = options.randomInt ?? ((max) => cryptoRandomInt(max));
     this.ttlMs = options.ttlMs ?? ROOM_TTL_MS;
     this.unusedTtlMs = options.unusedTtlMs ?? ROOM_UNUSED_TTL_MS;
+    this.territories = options.territories ?? loadTerritories();
   }
 
   get size(): number {
@@ -51,7 +56,7 @@ export class RoomStore {
     do code = this.generateCode();
     while (this.rooms.has(code));
     const now = this.now();
-    const room: Room = { code, game: createGame(), createdAt: now, lastActivity: now, joined: false };
+    const room: Room = { code, game: createGame(this.territories), createdAt: now, lastActivity: now, joined: false };
     this.rooms.set(code, room);
     return room;
   }
