@@ -11,3 +11,7 @@ venv/
 # Editores
 .vscode/
 .idea/
+
+# App
+node_modules/
+app/packages/client/dist/
