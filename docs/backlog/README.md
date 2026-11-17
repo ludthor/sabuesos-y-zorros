@@ -68,7 +68,7 @@ Hito 1, al cerrar la etapa 1: el árbitro digital ya se usa y mide las partidas 
 | --- | --- | --- | --- |
 | [C0-01](C0-01-crear-sala.md) | Crear una sala | hecha | — |
 | [C0-02](C0-02-elegir-territorios.md) | Elegir los territorios en juego | lista | C0-01 |
-| [C0-03](C0-03-unirse-a-un-bando.md) | Unirse a un bando | lista | C0-01 |
+| [C0-03](C0-03-unirse-a-un-bando.md) | Unirse a un bando | en curso | C0-01 |
 | [C0-04](C0-04-anotar-preguntas.md) | Anotar quién gana cada pregunta | lista | C0-02, C0-03 |
 | [C0-05](C0-05-final-de-partida.md) | Final de la partida | lista | C0-04 |
 | [C0-06](C0-06-direccion-de-pruebas.md) | Dirección de pruebas | lista | C0-01 |
