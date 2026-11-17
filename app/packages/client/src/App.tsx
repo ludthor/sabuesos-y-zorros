@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { canChangeSide, type Side } from '@syz/engine';
 import {
   ROOM_CODE_CONFUSABLES,
   ROOM_CODE_LENGTH,
@@ -8,9 +9,23 @@ import {
   normalizeRoomCode,
   parseRoomPath,
   roomPath,
+  type ServerMessage,
 } from '@syz/protocol';
+import { Animal } from './Animal.tsx';
 import type { Connection, ConnectionEvent } from './connection.ts';
 import { RoomQr } from './RoomQr.tsx';
+
+type RoomState = Extract<ServerMessage, { type: 'room_state' }>;
+
+/** Los textos que leen los jugadores van en tercera persona, como las cartas. */
+const SIDE_NAMES: Record<Side, string> = { hounds: 'Sabuesos', foxes: 'Zorros' };
+const SIDE_WITH_ARTICLE: Record<Side, string> = { hounds: 'los sabuesos', foxes: 'los zorros' };
+const OTHER: Record<Side, Side> = { hounds: 'foxes', foxes: 'hounds' };
+const SIDE_ORDER: readonly Side[] = ['hounds', 'foxes'];
+
+function devicesLabel(n: number): string {
+  return `${n} ${n === 1 ? 'dispositivo' : 'dispositivos'}`;
+}
 
 /** «0, O, 1, I ni L» */
 function listWithNi(items: readonly string[]): string {
@@ -35,7 +50,7 @@ function isLoopback(hostname: string): boolean {
 type View =
   | { name: 'home'; notice?: string }
   | { name: 'waiting' }
-  | { name: 'room'; code: string };
+  | { name: 'room'; code: string; state?: RoomState };
 
 function goTo(path: string) {
   if (window.location.pathname !== path) window.history.pushState(null, '', path);
@@ -63,10 +78,14 @@ export function App({ connection }: { connection: Connection }) {
         case 'room_joined':
           goTo(roomPath(msg.code));
           return setView({ name: 'room', code: msg.code });
+        case 'room_state':
+          return setView((v) => (v.name === 'room' ? { ...v, state: msg } : v));
         case 'room_expired':
           backHome();
           return setView({ name: 'home', notice: msg.reason === 'unused' ? NOTICES.unused : NOTICES.expired });
         case 'error':
+          // El servidor no saca de la sala a quien intenta cambiar de bando a destiempo.
+          if (msg.error === 'side_locked') return;
           backHome();
           return setView({
             name: 'home',
@@ -102,10 +121,16 @@ export function App({ connection }: { connection: Connection }) {
     connection.send({ type: 'join_room', code });
   }
 
+  function chooseSide(side: Side) {
+    connection.send({ type: 'choose_side', side });
+  }
+
   return (
     <main className="page">
-      {view.name === 'room' ? (
-        <RoomScreen code={view.code} shareOrigin={shareOrigin} />
+      {view.name === 'room' && view.state?.side && view.state.board ? (
+        <BoardScreen code={view.code} shareOrigin={shareOrigin} state={view.state} onChooseSide={chooseSide} />
+      ) : view.name === 'room' ? (
+        <RoomScreen code={view.code} shareOrigin={shareOrigin} onChooseSide={chooseSide} />
       ) : (
         <HomeScreen
           notice={view.name === 'home' ? view.notice : undefined}
@@ -178,14 +203,14 @@ function HomeScreen(props: {
   );
 }
 
-function RoomScreen({ code, shareOrigin }: { code: string; shareOrigin: string | null }) {
+/** Código, QR y dirección para que entren los demás dispositivos. */
+function Invite({ code, shareOrigin }: { code: string; shareOrigin: string | null }) {
   // Abierta en localhost, la dirección propia no sirve a un móvil: se usa la que da el servidor.
   const local = isLoopback(window.location.hostname);
   const origin = local && shareOrigin ? shareOrigin : window.location.origin;
   const url = `${origin}${roomPath(code)}`;
   return (
-    <section className="room">
-      <Title />
+    <>
       <p className="room__label">Código de la sala</p>
       <p className="room__code" data-testid="room-code" aria-label={code.split('').join(' ')}>
         {code}
@@ -201,6 +226,98 @@ function RoomScreen({ code, shareOrigin }: { code: string; shareOrigin: string |
           dirección de la red local.
         </p>
       )}
+    </>
+  );
+}
+
+function RoomScreen(props: { code: string; shareOrigin: string | null; onChooseSide: (side: Side) => void }) {
+  return (
+    <section className="room">
+      <Title />
+      <Invite code={props.code} shareOrigin={props.shareOrigin} />
+      <fieldset className="sides">
+        <legend>¿De qué bando es este dispositivo?</legend>
+        <div className="sides__row">
+          {SIDE_ORDER.map((side) => (
+            <button
+              key={side}
+              className={`button side-button side-button--${side}`}
+              onClick={() => props.onChooseSide(side)}
+            >
+              <Animal side={side} />
+              {SIDE_NAMES[side]}
+            </button>
+          ))}
+        </div>
+      </fieldset>
+    </section>
+  );
+}
+
+function BoardScreen(props: {
+  code: string;
+  shareOrigin: string | null;
+  state: RoomState;
+  onChooseSide: (side: Side) => void;
+}) {
+  const side = props.state.side!;
+  const board = props.state.board!;
+  return (
+    <section className="board">
+      <header className="board__header">
+        <p className={`side-badge side-badge--${side}`} data-testid="own-side">
+          <Animal side={side} labelled />
+          {SIDE_NAMES[side]}
+        </p>
+        <p className="board__room">
+          Sala <strong>{props.code}</strong>
+        </p>
+      </header>
+
+      <h2 id="score-title">Marcador</h2>
+      <div className="score" role="group" aria-labelledby="score-title">
+        {SIDE_ORDER.map((s) => (
+          <div key={s} className={`score__side score__side--${s}`}>
+            <Animal side={s} />
+            <span className="score__name">{SIDE_NAMES[s]}</span>
+            <p className="score__points" data-testid={`score-${s}`}>
+              {board.score[s]}
+            </p>
+            <p className="score__devices" data-testid={`devices-${s}`}>
+              {devicesLabel(props.state.devices[s])}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <h2 id="territories-title">Territorios en juego</h2>
+      <ol className="territories" aria-label="Territorios en juego">
+        {board.territories.map((t) => (
+          <li key={t.id} className="territory">
+            <h3>{t.name}</h3>
+            <p>{t.guide}</p>
+            {t.owner && (
+              <span className="territory__owner">
+                <Animal side={t.owner} />
+                Lo ganan {SIDE_WITH_ARTICLE[t.owner]}
+              </span>
+            )}
+          </li>
+        ))}
+      </ol>
+
+      {canChangeSide(board) && (
+        <button className="button" onClick={() => props.onChooseSide(OTHER[side])}>
+          Pasar a {SIDE_WITH_ARTICLE[OTHER[side]]}
+        </button>
+      )}
+
+      <details className="invite">
+        <summary>Invitar a otro dispositivo</summary>
+        <div className="invite__body">
+          <Invite code={props.code} shareOrigin={props.shareOrigin} />
+        </div>
+      </details>
     </section>
   );
 }

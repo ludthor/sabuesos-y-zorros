@@ -53,7 +53,8 @@ body {
 }
 
 .home,
-.room {
+.room,
+.board {
   width: min(100%, 420px);
   display: flex;
   flex-direction: column;
@@ -198,4 +199,206 @@ body {
 .room__help {
   margin: 0;
   line-height: 1.45;
+}
+
+/* Elección de bando (C0-03) */
+.sides {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 8px 0 0;
+  padding: 0;
+  border: 0;
+}
+.sides legend {
+  padding: 0;
+  margin-bottom: 4px;
+  font-weight: 800;
+  font-size: 1.2rem;
+}
+.sides__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.side-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-height: 132px;
+  padding: 14px 10px;
+  font-size: 1.25rem;
+  color: var(--cream);
+}
+.side-button svg {
+  width: 72px;
+  height: 72px;
+  padding: 6px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--cream);
+}
+.side-button--hounds {
+  background: var(--hounds);
+}
+.side-button--foxes {
+  background: var(--foxes);
+  color: var(--ink);
+}
+
+/* Tablero */
+.board__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.side-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 16px 6px 8px;
+  border: var(--border);
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 1.3rem;
+}
+.side-badge svg {
+  width: 44px;
+  height: 44px;
+  background: var(--cream);
+  border-radius: 50%;
+}
+.side-badge--hounds {
+  background: var(--hounds);
+  color: var(--cream);
+}
+.side-badge--foxes {
+  background: var(--foxes);
+  color: var(--ink);
+}
+.board__room {
+  margin: 0;
+  font-weight: 600;
+  color: var(--note);
+  white-space: nowrap;
+}
+.board__room strong {
+  color: var(--ink);
+  letter-spacing: 0.08em;
+}
+.board h2 {
+  margin: 0 0 -8px;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.score {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.score__side {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: 'animal name' 'animal points' 'devices devices';
+  align-items: center;
+  column-gap: 10px;
+  padding: 12px;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: var(--shadow);
+}
+.score__side--hounds {
+  border-top: 10px solid var(--hounds);
+}
+.score__side--foxes {
+  border-top: 10px solid var(--foxes);
+}
+.score__side svg {
+  grid-area: animal;
+  width: 48px;
+  height: 48px;
+}
+.score__name {
+  grid-area: name;
+  font-weight: 800;
+}
+.score__points {
+  grid-area: points;
+  margin: 0;
+  font-weight: 800;
+  font-size: 2.4rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.score__devices {
+  grid-area: devices;
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+  color: var(--note);
+}
+
+.territories {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.territory {
+  padding: 12px 14px;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: var(--territory);
+}
+.territory h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+.territory p {
+  margin: 4px 0 0;
+  line-height: 1.35;
+}
+.territory__owner {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 2px 10px 2px 4px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--paper);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.territory__owner svg {
+  width: 22px;
+  height: 22px;
+}
+
+.invite {
+  border: var(--border);
+  border-radius: var(--radius);
+  background: var(--paper);
+  padding: 0 14px;
+}
+.invite summary {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  font-weight: 800;
+  cursor: pointer;
+}
+.invite[open] {
+  padding-bottom: 16px;
+}
+.invite__body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }

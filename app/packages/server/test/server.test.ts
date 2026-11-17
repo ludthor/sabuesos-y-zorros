@@ -47,6 +47,13 @@ async function rawClient(url: string) {
       while (inbox.length === 0) await new Promise<void>((r) => waiters.push(r));
       return inbox.shift()!;
     },
+    /** El siguiente mensaje del tipo indicado; descarta los anteriores de otros tipos. */
+    async until<T extends ServerMessage['type']>(type: T): Promise<Extract<ServerMessage, { type: T }>> {
+      for (;;) {
+        const msg = await this.next();
+        if (msg.type === type) return msg as Extract<ServerMessage, { type: T }>;
+      }
+    },
   };
 }
 
@@ -106,8 +113,8 @@ describe('servidor de salas (C0-01)', () => {
     now += ROOM_TTL_MS;
     server!.sweep();
 
-    expect(await organizer.next()).toEqual({ type: 'room_expired', reason: 'inactive' });
-    expect(await other.next()).toEqual({ type: 'room_expired', reason: 'inactive' });
+    expect(await organizer.until('room_expired')).toEqual({ type: 'room_expired', reason: 'inactive' });
+    expect(await other.until('room_expired')).toEqual({ type: 'room_expired', reason: 'inactive' });
     expect(store.find(created.code)).toBeUndefined();
     expect(server!.joinedCount()).toBe(0);
 
@@ -127,7 +134,7 @@ describe('servidor de salas (C0-01)', () => {
     now += ROOM_UNUSED_TTL_MS;
     server!.sweep();
 
-    expect(await organizer.next()).toEqual({ type: 'room_expired', reason: 'unused' });
+    expect(await organizer.until('room_expired')).toEqual({ type: 'room_expired', reason: 'unused' });
     expect(store.find(created.code)).toBeUndefined();
   });
 
@@ -198,3 +205,97 @@ describe('servidor de salas (C0-01)', () => {
   });
 });
 
+
+describe('bandos (C0-03)', () => {
+  async function roomWithTwoDevices() {
+    const { url, store } = await start();
+    const organizer = await client(url);
+    organizer.send({ type: 'create_room' });
+    const created = await organizer.until('room_created');
+    await organizer.until('room_state');
+    const other = await client(url);
+    other.send({ type: 'join_room', code: created.code });
+    await other.until('room_state');
+    return { url, store, code: created.code, organizer, other };
+  }
+
+  it('al entrar, el dispositivo aún no tiene bando ni ve el tablero', async () => {
+    const { url } = await start();
+    const organizer = await client(url);
+    organizer.send({ type: 'create_room' });
+    await organizer.until('room_created');
+    expect(await organizer.next()).toEqual({
+      type: 'room_state',
+      side: null,
+      board: null,
+      devices: { foxes: 0, hounds: 0 },
+    });
+  });
+
+  it('cuando elige bando, ve los territorios en juego y el marcador', async () => {
+    const { other } = await roomWithTwoDevices();
+    other.send({ type: 'choose_side', side: 'foxes' });
+    const state = await other.until('room_state');
+    expect(state.side).toBe('foxes');
+    expect(state.devices).toEqual({ foxes: 1, hounds: 0 });
+    expect(state.board?.score).toEqual({ foxes: 0, hounds: 0 });
+    expect(state.board?.territories.map((t) => t.name)).toEqual([
+      'Pregunta y objetivos',
+      'Antecedentes',
+      'Método',
+      'Resultados',
+      'Limitaciones',
+      'Contribución',
+    ]);
+    expect(state.board?.territories.every((t) => t.owner === null)).toBe(true);
+  });
+
+  it('cuando un dispositivo cambia el estado, el otro lo recibe en menos de un segundo', async () => {
+    const { organizer, other } = await roomWithTwoDevices();
+    organizer.send({ type: 'choose_side', side: 'hounds' });
+    await organizer.until('room_state');
+    await other.until('room_state');
+
+    const sentAt = performance.now();
+    other.send({ type: 'choose_side', side: 'foxes' });
+    const seen = await organizer.until('room_state');
+    expect(performance.now() - sentAt).toBeLessThan(1000);
+    expect(seen.side).toBe('hounds');
+    expect(seen.devices).toEqual({ foxes: 1, hounds: 1 });
+  });
+
+  it('un dispositivo puede cambiar de bando antes de empezar', async () => {
+    const { other } = await roomWithTwoDevices();
+    other.send({ type: 'choose_side', side: 'foxes' });
+    await other.until('room_state');
+    other.send({ type: 'choose_side', side: 'hounds' });
+    const state = await other.until('room_state');
+    expect(state.side).toBe('hounds');
+    expect(state.devices).toEqual({ foxes: 0, hounds: 1 });
+  });
+
+  it('si un dispositivo se va, los demás ven un dispositivo menos en su bando', async () => {
+    const { organizer, other } = await roomWithTwoDevices();
+    other.send({ type: 'choose_side', side: 'foxes' });
+    expect((await organizer.until('room_state')).devices).toEqual({ foxes: 1, hounds: 0 });
+    other.ws.close();
+    expect((await organizer.until('room_state')).devices).toEqual({ foxes: 0, hounds: 0 });
+  });
+
+  it('el estado que recibe cada dispositivo solo trae el tablero público (ADR-0001)', async () => {
+    const { other } = await roomWithTwoDevices();
+    other.send({ type: 'choose_side', side: 'hounds' });
+    const state = await other.until('room_state');
+    expect(Object.keys(state).sort()).toEqual(['board', 'devices', 'side', 'type']);
+    expect(Object.keys(state.board!).sort()).toEqual(['phase', 'score', 'territories']);
+  });
+
+  it('elegir bando fuera de una sala, o un bando que no existe, recibe un error', async () => {
+    const { url } = await start();
+    const c = await client(url);
+    c.send({ type: 'choose_side', side: 'foxes' });
+    expect(await c.next()).toEqual({ type: 'error', error: 'not_in_room' });
+    c.send({ type: 'choose_side', side: 'wolves' });
+    expect(await c.next()).toEqual({ type: 'error', error: 'bad_message' });
+  });
+});

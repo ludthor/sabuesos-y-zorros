@@ -3,6 +3,8 @@
  * Lo comparten cliente y servidor; no contiene reglas del juego.
  */
 
+import type { BoardView, Side } from '@syz/engine';
+
 /** Caracteres que se confunden al dictar el código en voz alta (C0-01). */
 export const ROOM_CODE_CONFUSABLES = ['0', 'O', '1', 'I', 'L'] as const;
 export const ROOM_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -39,9 +41,11 @@ export function parseRoomPath(pathname: string): string | null {
 
 export type ClientMessage =
   | { type: 'create_room' }
-  | { type: 'join_room'; code: string };
+  | { type: 'join_room'; code: string }
+  /** Elegir o cambiar el bando de este dispositivo (C0-03). */
+  | { type: 'choose_side'; side: Side };
 
-export type ErrorCode = 'room_not_found' | 'bad_message';
+export type ErrorCode = 'room_not_found' | 'bad_message' | 'not_in_room' | 'side_locked';
 
 export type ServerMessage =
   /** Al conectar: dirección que deben usar los demás dispositivos, si el servidor la conoce. */
@@ -49,6 +53,11 @@ export type ServerMessage =
   | { type: 'room_created'; code: string }
   | { type: 'room_joined'; code: string }
   | { type: 'room_expired'; reason: ExpiryReason }
+  /**
+   * Lo que este dispositivo ve de la sala. Llega al entrar y cada vez que algo cambia.
+   * Sin bando no hay tablero; con bando, solo la vista de ese bando (ADR-0001).
+   */
+  | { type: 'room_state'; side: Side | null; board: BoardView | null; devices: Record<Side, number> }
   | { type: 'error'; error: ErrorCode };
 
 /** Valida un mensaje recibido por la red; devuelve null si no es válido. */
@@ -64,6 +73,9 @@ export function parseClientMessage(raw: string): ClientMessage | null {
   if (msg.type === 'create_room') return { type: 'create_room' };
   if (msg.type === 'join_room' && typeof msg.code === 'string') {
     return { type: 'join_room', code: msg.code };
+  }
+  if (msg.type === 'choose_side' && (msg.side === 'foxes' || msg.side === 'hounds')) {
+    return { type: 'choose_side', side: msg.side };
   }
   return null;
 }

@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { WebSocketServer, type WebSocket } from 'ws';
+import { boardFor, canChangeSide, type Side } from '@syz/engine';
 import {
   isRoomCode,
   normalizeRoomCode,
@@ -44,7 +45,8 @@ export interface SyzServer {
 export function createSyzServer(options: SyzServerOptions = {}): SyzServer {
   const store = options.store ?? new RoomStore();
   const members = new Map<string, Set<WebSocket>>();
-  const roomBySocket = new Map<WebSocket, string>();
+  /** Sala y bando de cada dispositivo. El bando es del dispositivo, no de la partida. */
+  const devices = new Map<WebSocket, { code: string; side: Side | null }>();
 
   const httpServer = createServer((req, res) => {
     if (options.handleHttp) return options.handleHttp(req, res);
@@ -66,17 +68,46 @@ export function createSyzServer(options: SyzServerOptions = {}): SyzServer {
 
   function join(ws: WebSocket, code: string) {
     leave(ws);
-    roomBySocket.set(ws, code);
+    devices.set(ws, { code, side: null });
     let set = members.get(code);
     if (!set) members.set(code, (set = new Set()));
     set.add(ws);
+    sendState(ws);
   }
 
   function leave(ws: WebSocket) {
-    const code = roomBySocket.get(ws);
-    if (code === undefined) return;
-    roomBySocket.delete(ws);
-    members.get(code)?.delete(ws);
+    const device = devices.get(ws);
+    if (!device) return;
+    devices.delete(ws);
+    members.get(device.code)?.delete(ws);
+    if (device.side) broadcastState(device.code);
+  }
+
+  function deviceCount(code: string): Record<Side, number> {
+    const count: Record<Side, number> = { foxes: 0, hounds: 0 };
+    for (const ws of members.get(code) ?? []) {
+      const side = devices.get(ws)?.side;
+      if (side) count[side]++;
+    }
+    return count;
+  }
+
+  /** Cada dispositivo recibe solo la vista de su bando (ADR-0001). */
+  function sendState(ws: WebSocket, count?: Record<Side, number>) {
+    const device = devices.get(ws);
+    const room = device && store.find(device.code);
+    if (!device || !room) return;
+    send(ws, {
+      type: 'room_state',
+      side: device.side,
+      board: device.side ? boardFor(room.game, device.side) : null,
+      devices: count ?? deviceCount(device.code),
+    });
+  }
+
+  function broadcastState(code: string) {
+    const count = deviceCount(code);
+    for (const ws of members.get(code) ?? []) sendState(ws, count);
   }
 
   wss.on('connection', (ws) => {
@@ -85,14 +116,14 @@ export function createSyzServer(options: SyzServerOptions = {}): SyzServer {
       const msg = parseClientMessage(String(data));
       if (!msg) return send(ws, { type: 'error', error: 'bad_message' });
 
-      const current = roomBySocket.get(ws);
-      if (current) store.touch(current);
+      const current = devices.get(ws);
+      if (current) store.touch(current.code);
 
       switch (msg.type) {
         case 'create_room': {
           const room = store.create();
-          join(ws, room.code);
-          return send(ws, { type: 'room_created', code: room.code });
+          send(ws, { type: 'room_created', code: room.code });
+          return join(ws, room.code);
         }
         case 'join_room': {
           const code = normalizeRoomCode(msg.code);
@@ -102,8 +133,18 @@ export function createSyzServer(options: SyzServerOptions = {}): SyzServer {
           }
           store.touch(code);
           store.markJoined(code);
-          join(ws, code);
-          return send(ws, { type: 'room_joined', code });
+          send(ws, { type: 'room_joined', code });
+          return join(ws, code);
+        }
+        case 'choose_side': {
+          const room = current && store.find(current.code);
+          if (!current || !room) return send(ws, { type: 'error', error: 'not_in_room' });
+          if (current.side === msg.side) return sendState(ws);
+          if (current.side && !canChangeSide(room.game)) {
+            return send(ws, { type: 'error', error: 'side_locked' });
+          }
+          current.side = msg.side;
+          return broadcastState(current.code);
         }
       }
     });
@@ -115,7 +156,7 @@ export function createSyzServer(options: SyzServerOptions = {}): SyzServer {
   function sweep() {
     for (const { code, reason } of store.sweep()) {
       for (const ws of members.get(code) ?? []) {
-        roomBySocket.delete(ws);
+        devices.delete(ws);
         send(ws, { type: 'room_expired', reason });
       }
       members.delete(code);
@@ -130,7 +171,7 @@ export function createSyzServer(options: SyzServerOptions = {}): SyzServer {
     httpServer,
     store,
     sweep,
-    joinedCount: () => roomBySocket.size,
+    joinedCount: () => devices.size,
     listen(port, host) {
       return new Promise((resolve, reject) => {
         httpServer.once('error', reject);

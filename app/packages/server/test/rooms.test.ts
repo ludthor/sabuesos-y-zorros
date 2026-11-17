@@ -12,7 +12,8 @@ describe('RoomStore', () => {
     const store = new RoomStore();
     const room = store.create();
     expect(isRoomCode(room.code)).toBe(true);
-    expect(room.game).toEqual({ phase: 'setup' });
+    expect(room.game.phase).toBe('setup');
+    expect(room.game.territories).toHaveLength(6);
     expect(store.find(room.code)).toBe(room);
   });
 
