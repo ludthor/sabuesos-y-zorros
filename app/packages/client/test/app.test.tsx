@@ -270,8 +270,12 @@ describe('preparación de la partida (C0-02)', () => {
 
   it('el tiempo de preguntas sugiere el número de territorios del §7', async () => {
     const { sent } = await asSide('hounds');
-    fireEvent.change(screen.getByLabelText('Tiempo de preguntas (minutos)'), { target: { value: '25' } });
+    const minutes = screen.getByLabelText('Tiempo de preguntas (minutos)');
+    fireEvent.change(minutes, { target: { value: '2' } });
+    fireEvent.change(minutes, { target: { value: '25' } });
     expect(screen.getByText(/se sugieren 4 territorios/)).toBeDefined();
+    expect(sent).toEqual([]); // nada mientras se escribe
+    fireEvent.blur(minutes);
     expect(sent).toEqual([{ type: 'game_action', action: { type: 'set_territory_count', count: 4 } }]);
   });
 
@@ -313,18 +317,18 @@ describe('preparación de la partida (C0-02)', () => {
     await asSide('foxes');
     expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
     expect(screen.queryByRole('button', { name: 'Empezar la partida' })).toBeNull();
-    expect(screen.getByText(/Los sabuesos preparan la partida/)).toBeDefined();
+    expect(screen.getByText(/Los sabuesos preparan la partida/).textContent).toMatch(/2 de 2/);
     expect(within(screen.getByRole('list', { name: 'Territorios en juego' })).getAllByRole('listitem')).toHaveLength(2);
   });
 
   it('al empezar, los zorros eligen el primer territorio en disputa', async () => {
-    const { sent } = await asSide('foxes', { ...BOARD, phase: 'opening' });
+    const { sent } = await asSide('foxes', { ...BOARD, phase: 'first_pick' });
     fireEvent.click(screen.getByRole('button', { name: /Método/ }));
     expect(sent).toEqual([{ type: 'game_action', action: { type: 'choose_first_territory', id: 'T03' } }]);
   });
 
   it('mientras tanto, los sabuesos ven que eligen los zorros', async () => {
-    await asSide('hounds', { ...BOARD, phase: 'opening' });
+    await asSide('hounds', { ...BOARD, phase: 'first_pick' });
     expect(screen.getByText(/Los zorros eligen por qué territorio se empieza/)).toBeDefined();
     expect(screen.queryByRole('button', { name: /Método/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Pasar a/ })).toBeNull();

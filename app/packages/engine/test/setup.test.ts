@@ -115,7 +115,7 @@ describe('empezar la partida', () => {
 
   it('al empezar, los zorros eligen el primer territorio en disputa (§3.4)', () => {
     let g = ok(readyWithFour(), 'hounds', { type: 'start_game' });
-    expect(g.phase).toBe('opening');
+    expect(g.phase).toBe('first_pick');
     expect(g.current).toBeNull();
     expect(rejected(g, 'hounds', { type: 'choose_first_territory', id: 'T03' })).toBe('not_allowed');
 

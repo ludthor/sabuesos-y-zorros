@@ -54,7 +54,7 @@ export const NOTICES = {
     not_allowed: 'Eso no le corresponde a este bando.',
     wrong_phase: 'Eso ya no se puede hacer en este momento de la partida.',
     invalid_count: `Se juegan entre ${MIN_TERRITORIES} y ${MAX_TERRITORIES} territorios.`,
-    unknown_territory: 'Ese territorio no está en juego.',
+    unknown_territory: 'Ese territorio no se puede elegir.',
     count_mismatch: 'El número de territorios marcados no coincide con el número elegido.',
     foxes_missing: 'Para empezar, tiene que haber en la sala al menos un dispositivo de los zorros.',
   } satisfies Record<RuleError, string>,
@@ -331,16 +331,17 @@ function BoardScreen(props: {
 
       {board.phase === 'setup' && side === 'hounds' ? (
         <SetupPanel board={board} foxesHere={devices.foxes > 0} onAction={props.onAction} />
-      ) : board.phase === 'opening' && side === 'foxes' ? (
+      ) : board.phase === 'first_pick' && side === 'foxes' ? (
         <FirstTerritoryPicker board={board} onAction={props.onAction} />
       ) : (
         <>
           {board.phase === 'setup' && (
             <p className="status">
-              Los sabuesos preparan la partida: eligen cuántos territorios se juegan y cuáles.
+              Los sabuesos preparan la partida: eligen cuántos territorios se juegan y cuáles. Por ahora,{' '}
+              {board.territories.length} de {board.territoryCount}.
             </p>
           )}
-          {board.phase === 'opening' && (
+          {board.phase === 'first_pick' && (
             <p className="status">Los zorros eligen por qué territorio se empieza.</p>
           )}
           <TerritoryList board={board} />
@@ -399,7 +400,8 @@ function SetupPanel(props: { board: BoardView; foxesHere: boolean; onAction: (ac
   const { board, onAction } = props;
   const [minutes, setMinutes] = useState('');
   const minutesValue = Number(minutes);
-  const suggestion = minutes !== '' && minutesValue > 0 ? suggestedTerritoryCount(minutesValue) : null;
+  const validMinutes = minutes !== '' && Number.isInteger(minutesValue) && minutesValue > 0;
+  const suggestion = validMinutes ? suggestedTerritoryCount(minutesValue) : null;
   const marked = board.territories.length;
   const inPlay = new Set(board.territories.map((t) => t.id));
   const blocker =
@@ -409,12 +411,11 @@ function SetupPanel(props: { board: BoardView; foxesHere: boolean; onAction: (ac
         ? 'Falta que entre en la sala algún dispositivo de los zorros: son ellos quienes eligen el primer territorio.'
         : null;
 
-  function changeMinutes(value: string) {
-    setMinutes(value);
-    const n = Number(value);
-    if (value === '' || !(n > 0)) return;
-    const count = suggestedTerritoryCount(n);
-    if (count !== board.territoryCount) onAction({ type: 'set_territory_count', count });
+  /** La sugerencia se aplica al terminar de escribir, no en cada pulsación. */
+  function applySuggestion() {
+    if (suggestion !== null && suggestion !== board.territoryCount) {
+      onAction({ type: 'set_territory_count', count: suggestion });
+    }
   }
 
   const counts = Array.from({ length: MAX_TERRITORIES - MIN_TERRITORIES + 1 }, (_, i) => MIN_TERRITORIES + i);
@@ -431,13 +432,17 @@ function SetupPanel(props: { board: BoardView; foxesHere: boolean; onAction: (ac
           type="number"
           inputMode="numeric"
           min={1}
+          step={1}
           value={minutes}
-          onChange={(e) => changeMinutes(e.target.value)}
+          onChange={(e) => setMinutes(e.target.value)}
+          onBlur={applySuggestion}
+          onKeyDown={(e) => e.key === 'Enter' && applySuggestion()}
           placeholder="30"
         />
         {suggestion !== null && (
           <p className="setup__hint">
-            Para {minutesValue} minutos se sugieren {suggestion} territorios.
+            Para {minutesValue} {minutesValue === 1 ? 'minuto' : 'minutos'} se sugieren {suggestion} territorios.
+            {suggestion !== board.territoryCount && ' Se aplica al salir del campo.'}
           </p>
         )}
       </div>

@@ -26,10 +26,10 @@ export interface TerritoryState extends Territory {
 
 /**
  * - `setup`: el tribunal elige cuántos territorios se juegan y cuáles (§3.4).
- * - `opening`: los zorros eligen por cuál se empieza (§3.4).
+ * - `first_pick`: los zorros eligen por cuál se empieza (§3.4). No es la «Apertura» del §4.1.
  * - `playing`: hay un territorio en disputa (§4.3).
  */
-export type Phase = 'setup' | 'opening' | 'playing';
+export type Phase = 'setup' | 'first_pick' | 'playing';
 
 export interface GameState {
   phase: Phase;
@@ -44,7 +44,12 @@ export interface GameState {
 }
 
 /** Lo que un bando ve de la partida (ADR-0001). Hoy todo es público; las manos llegan en C2. */
-export interface BoardView extends GameState {
+export interface BoardView {
+  phase: Phase;
+  catalog: Territory[];
+  territoryCount: number;
+  territories: TerritoryState[];
+  current: string | null;
   /** Territorios ganados por cada bando. */
   score: Record<Side, number>;
 }
@@ -66,7 +71,16 @@ export function createGame(territories: readonly Territory[]): GameState {
 export function boardFor(state: GameState, _side: Side): BoardView {
   const score: Record<Side, number> = { foxes: 0, hounds: 0 };
   for (const t of state.territories) if (t.owner) score[t.owner]++;
-  return { ...structuredClone(state), score };
+  // Campo a campo, a propósito: lo que se añada a GameState (las manos, en C2) no se envía
+  // a nadie hasta que se decida aquí qué bando puede verlo.
+  return {
+    phase: state.phase,
+    catalog: state.catalog.map((t) => ({ ...t })),
+    territoryCount: state.territoryCount,
+    territories: state.territories.map((t) => ({ ...t })),
+    current: state.current,
+    score,
+  };
 }
 
 /** Un dispositivo puede cambiar de bando mientras la partida no ha empezado (Ariel, C0-03). */
@@ -126,7 +140,7 @@ export function applyAction(state: GameState, side: Side, action: GameAction, ct
     case 'choose_first_territory': {
       // «Los zorros eligen por cuál se empieza» (§3.4).
       if (side !== 'foxes') return reject('not_allowed');
-      if (state.phase !== 'opening') return reject('wrong_phase');
+      if (state.phase !== 'first_pick') return reject('wrong_phase');
       if (!state.territories.some((t) => t.id === action.id)) return reject('unknown_territory');
       return accept({ ...structuredClone(state), phase: 'playing', current: action.id });
     }
@@ -159,6 +173,6 @@ function setupAction(
     case 'start_game':
       if (state.territories.length !== state.territoryCount) return reject('count_mismatch');
       if (!ctx.foxesPresent) return reject('foxes_missing');
-      return accept({ ...structuredClone(state), phase: 'opening' });
+      return accept({ ...structuredClone(state), phase: 'first_pick' });
   }
 }

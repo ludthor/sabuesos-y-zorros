@@ -359,7 +359,7 @@ describe('preparación de la partida (C0-02)', () => {
     hounds.send(act({ type: 'start_game' }));
     let seen;
     do seen = await foxes.until('room_state');
-    while (seen.board?.phase !== 'opening');
+    while (seen.board?.phase !== 'first_pick');
     expect(seen.board.territories.map((t) => t.id)).toEqual(['T01', 'T03', 'T05']);
 
     foxes.send(act({ type: 'choose_first_territory', id: 'T05' }));
@@ -374,7 +374,7 @@ describe('preparación de la partida (C0-02)', () => {
     hounds.send(act({ type: 'start_game' }));
     let seen;
     do seen = await foxes.until('room_state');
-    while (seen.board?.phase !== 'opening');
+    while (seen.board?.phase !== 'first_pick');
 
     foxes.send({ type: 'choose_side', side: 'hounds' });
     expect(await foxes.next()).toEqual({ type: 'error', error: 'side_locked' });
