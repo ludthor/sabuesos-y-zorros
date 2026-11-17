@@ -2,7 +2,7 @@
 id: C0-01
 titulo: Crear una sala
 corte: C0
-estado: en revisión
+estado: hecha
 reglamento: "—"
 depende_de: []
 ---
